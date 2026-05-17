@@ -52,6 +52,7 @@ public:
     * is destroyed, ensuring that any waiting coroutines are awakened.
     */
    struct End : std::runtime_error {
+      /** @brief Construct the terminal End exception. */
       End()
          : std::runtime_error("Promise ended") {}
    };
@@ -68,6 +69,7 @@ public:
    StatePromise& operator=(StatePromise const&)     = delete;
    StatePromise& operator=(StatePromise&&) noexcept = delete;
 
+   /** @brief Destroy the state promise and unblock pending waiters via Done(). */
    virtual ~StatePromise();
 
    /**

@@ -52,6 +52,7 @@ public:
     * is destroyed, ensuring that any waiting coroutines are awakened.
     */
    struct End : std::runtime_error {
+      /** @brief Construct the terminal End exception. */
       End()
          : std::runtime_error("Promise ended") {}
    };

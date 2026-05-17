@@ -41,9 +41,12 @@ using namespace std::chrono;
 template <std::size_t SIZE = 10>
 class Pool : private ::Pool<false, SIZE> {
 public:
-   using duration   = typename ::Pool<false, SIZE>::duration;
+   /** @brief Duration type used to schedule delayed dispatch calls. */
+   using duration = typename ::Pool<false, SIZE>::duration;
+   /** @brief Time-point type used for absolute scheduling in Dispatch calls. */
    using time_point = typename ::Pool<false, SIZE>::time_point;
 
+   /** @brief Construct a pool with a name prefix used for worker threads. */
    explicit Pool(std::string_view thread_name)
       : ::Pool<false, SIZE>{thread_name} {}
 
