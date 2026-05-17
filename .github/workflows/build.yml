@@ -74,6 +74,9 @@ jobs:
           gcovr \
             --root . \
             --merge-lines \
+            --exclude-unreachable-branches \
+            --exclude-throw-branches \
+            --exclude-noncode-lines \
             --object-directory build \
             --filter 'include/.*' \
             --filter 'src/.*' \

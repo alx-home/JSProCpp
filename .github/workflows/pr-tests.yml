@@ -95,6 +95,7 @@ jobs:
             --html-details=coverage/html/coverage-details.html \
             --xml -o coverage/coverage.xml \
             --json coverage/coverage.json \
+            --lcov coverage/coverage.lcov \
             | tee coverage/summary.txt
 
       - name: Upload coverage artifact
