@@ -57,7 +57,9 @@ Promise<T, WITH_RESOLVER>::Promise(handle_type handle)
 template <class T, bool WITH_RESOLVER>
 Promise<T, WITH_RESOLVER>::~Promise() {
    if (this->handle_) {
+      // GCOVR_EXCL_START
       assert(this->self_owned_);
+      // GCOVR_EXCL_STOP
    }
 
    assert(WITH_RESOLVER || [this] constexpr {
@@ -803,7 +805,7 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
 
                  apply_value(std::move(resolve), reject, std::move(func), value);
               }
-           } catch (...) {
+           } catch (...) {  // GCOVR_EXCL_START
               assert(
                 false
                 && "This shall not throw since we're already handling "
@@ -816,7 +818,7 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
               }
 
               (*reject)(std::current_exception());
-           }
+           }  // GCOVR_EXCL_STOP
         },
         ulock
       );

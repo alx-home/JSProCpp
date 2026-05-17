@@ -116,6 +116,16 @@ struct Test {
    }
 
    template <class T, bool WITH_RESOLVER>
+   static std::shared_ptr<promise::details::Promise<T, WITH_RESOLVER>> CreateWithoutResolver() {
+      struct MakeUniqueFriend : details::Promise<T, WITH_RESOLVER> {
+         MakeUniqueFriend(details::Promise<T, WITH_RESOLVER>::handle_type handle)
+            : details::Promise<T, WITH_RESOLVER>(std::move(handle)) {}
+      };
+
+      return std::make_shared<MakeUniqueFriend>(handle_type<T, WITH_RESOLVER>{});
+   }
+
+   template <class T, bool WITH_RESOLVER>
    static std::shared_ptr<promise::details::Promise<T, WITH_RESOLVER>> CreatePending() {
       auto promise                   = Create<T, WITH_RESOLVER>();
       promise->resolver_->resolved_  = false;
@@ -144,6 +154,47 @@ struct Test {
    UnregisterAwaitFunction(promise::details::Promise<T, WITH_RESOLVER>& promise, std::size_t id) {
       std::unique_lock lock{promise.mutex_};
       return promise.UnAwait(id, lock);
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static std::size_t RegisterAwaitFunctionWithLockGuard(
+     promise::details::Promise<T, WITH_RESOLVER>& promise,
+     std::function<void()>                        fun
+   ) {
+      std::lock_guard lock{promise.mutex_};
+      return promise.Await(std::move(fun), lock);
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool UnregisterAwaitFunctionWithLockGuard(
+     promise::details::Promise<T, WITH_RESOLVER>& promise,
+     std::size_t                                  id
+   ) {
+      std::lock_guard lock{promise.mutex_};
+      return promise.UnAwait(id, lock);
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static void AwaitSuspendWithLockGuard(
+     promise::details::Promise<T, WITH_RESOLVER>& promise,
+     std::coroutine_handle<>                      h
+   ) {
+      std::lock_guard lock{promise.mutex_};
+      promise.Await(h, lock);
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool ExerciseUnlock(promise::details::Promise<T, WITH_RESOLVER>& promise) {
+      std::unique_lock lock{promise.mutex_};
+      using Unlock = typename details::Promise<T, WITH_RESOLVER>::Unlock;
+
+      {
+         Unlock unlock{lock};
+         (void)unlock;
+         REQUIRE(lock.owns_lock());
+      }
+
+      return !lock.owns_lock();
    }
 
    template <class T, bool WITH_RESOLVER>
@@ -183,6 +234,37 @@ struct Test {
    template <class T, bool WITH_RESOLVER>
    static bool await_ready(promise::details::Promise<T, WITH_RESOLVER>& promise) {
       return promise.await_ready();
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static void InitSuspendAwaitResume(promise::details::Promise<T, WITH_RESOLVER>& promise) {
+      using InitSuspend = typename promise_type<T, WITH_RESOLVER>::PromiseType::InitSuspend;
+      InitSuspend init{.self_ = promise};
+      init.await_resume();
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static auto GetParentFromPromiseType(promise::details::Promise<T, WITH_RESOLVER>& promise) ->
+     typename promise_type<T, WITH_RESOLVER>::PromiseType::Parent* {
+      auto* promise_type = promise.handle_ ? &promise.handle_.promise() : nullptr;
+      return promise_type ? promise_type->GetParent() : nullptr;
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool InitSuspendAwaitReady(promise::details::Promise<T, WITH_RESOLVER>& promise) {
+      using InitSuspend = typename promise_type<T, WITH_RESOLVER>::PromiseType::InitSuspend;
+      InitSuspend init{.self_ = promise};
+      return init.await_ready();
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static void InitSuspendAwaitSuspend(
+     promise::details::Promise<T, WITH_RESOLVER>& promise,
+     std::coroutine_handle<>                      h
+   ) {
+      using InitSuspend = typename promise_type<T, WITH_RESOLVER>::PromiseType::InitSuspend;
+      InitSuspend init{.self_ = promise};
+      init.await_suspend(h);
    }
 
    template <class T, bool WITH_RESOLVER>
