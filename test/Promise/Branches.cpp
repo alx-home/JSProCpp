@@ -1,4 +1,4 @@
-#include "TestCommon.h"
+#include "../TestCommon.h"
 
 TEST_CASE(
   "Catch pass-through preserves resolved values across return kinds",

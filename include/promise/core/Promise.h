@@ -434,5 +434,12 @@ private:
    std::vector<Awaiter>      awaiters_{};
 
    friend Handle<T, WITH_RESOLVER>;
+
+   /** @brief Grants the enclosing IPromise<T, WITH_RESOLVER> access to PromiseType's private
+    * members.
+    *
+    * @warning For testing purposes only - this is not intended for general use.
+    */
+   friend struct ::promise::Test;
 };
 }  // namespace promise::details

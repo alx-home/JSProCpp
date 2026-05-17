@@ -16,13 +16,19 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 # Test executable
-add_executable(promise_test
-   test_promise.cpp
-   test_promise_chains.cpp
-   test_promise_components.cpp
-   test_promise_branches.cpp
-   test_promise_deep_branches.cpp
-   test_promise_rvalue_and_resolver.cpp
+file(GLOB_RECURSE PROMISE_TEST_SOURCES CONFIGURE_DEPENDS
+   "${CMAKE_CURRENT_SOURCE_DIR}/Promise/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/Resolver/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/CVPromise/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/StatePromise/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/MessageQueue/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/Pool/*.cpp"
+)
+
+add_executable(promise_test ${PROMISE_TEST_SOURCES})
+
+target_include_directories(promise_test PRIVATE
+   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(promise_test PRIVATE

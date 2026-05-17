@@ -1,4 +1,4 @@
-#include "TestCommon.h"
+#include "../TestCommon.h"
 
 TEST_CASE("Rvalue Then Catch Finally paths are exercised", "[Promise][RValue]") {
    auto then_rvalue = Promise<int>::Resolve(5).Then([](int value) { return value + 1; });
@@ -58,32 +58,4 @@ TEST_CASE(
    REQUIRE_FALSE((*reject_source)(std::make_exception_ptr(TestError{"ignored"})));
    REQUIRE(winner.Resolved());
    REQUIRE(winner.Value() == 555);
-}
-
-TEST_CASE(
-  "Resolver Create<true> returns resolve reject handles for external completion",
-  "[Promise]"
-) {
-   std::function<Promise<int, true>(Resolve<int> const&, Reject const&)> resolver_factory =
-     [](Resolve<int> const&, Reject const&) -> Promise<int, true> { co_return; };
-
-   auto [promise_ok, resolve_ok, reject_ok] =
-     promise::details::Promise<int, true>::template Create<true>(resolver_factory);
-
-   REQUIRE_FALSE(promise_ok.Done());
-   REQUIRE((*resolve_ok)(101));
-   REQUIRE_FALSE((*reject_ok)(std::make_exception_ptr(TestError{"ignored"})));
-
-   REQUIRE(promise_ok.Resolved());
-   REQUIRE(promise_ok.Value() == 101);
-
-   auto [promise_fail, resolve_fail, reject_fail] =
-     promise::details::Promise<int, true>::template Create<true>(resolver_factory);
-
-   REQUIRE_FALSE(promise_fail.Done());
-   REQUIRE((*reject_fail)(std::make_exception_ptr(TestError{"rpromise reject"})));
-   REQUIRE_FALSE((*resolve_fail)(55));
-
-   REQUIRE(promise_fail.Rejected());
-   RequireException<TestError>(promise_fail.Exception());
 }

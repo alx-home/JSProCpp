@@ -360,6 +360,12 @@ public:
    /** @brief Base value promise class. */
    friend ValuePromise;
    friend class Resolver<T>;
+
+   /** @brief Grants the enclosing Handle<T, WITH_RESOLVER> access to PromiseType's private members.
+    *
+    * @warning For testing purposes only - this is not intended for general use.
+    */
+   friend struct ::promise::Test;
 };
 
 }  // namespace promise

@@ -1,4 +1,4 @@
-#include "TestCommon.h"
+#include "../TestCommon.h"
 
 TEST_CASE("co_await propagates promise exceptions like the old driver", "[Promise][Chains]") {
    auto p = WPromise{[]() -> Promise<std::string> {
@@ -87,32 +87,6 @@ TEST_CASE(
    REQUIRE(prom2.Value() == 6);
 }
 
-TEST_CASE(
-  "Then supports resolver-based continuations across value and void",
-  "[Resolver][Chains]"
-) {
-   auto p =
-     WPromise{[]() -> Promise<int> { co_return 999; }}
-       .Then([](int value) -> Promise<void> {
-          REQUIRE(value == 999);
-          co_return;
-       })
-       .Then([]() -> Promise<void> { co_return; })
-       .Then([](Resolve<int> const& resolve, Reject const&) -> Promise<int, true> {
-          REQUIRE(resolve(111));
-          co_return;
-       })
-       .Then([](Resolve<void> const& resolve, Reject const&, int value) -> Promise<void, true> {
-          REQUIRE(value == 111);
-          REQUIRE(resolve());
-          co_return;
-       })
-       .Then([]() -> Promise<int> { co_return 888; });
-
-   REQUIRE(p.Resolved());
-   REQUIRE(p.Value() == 888);
-}
-
 TEST_CASE("Asynchronous Catch can await another promise before recovering", "[Promise][Chains]") {
    auto [gate, resolve, reject] = promise::Create<void>();
 
@@ -155,47 +129,4 @@ TEST_CASE("All rejects when any member rejects", "[Promise][Chains]") {
 
    REQUIRE(all.Rejected());
    RequireException<TestError>(all.Exception());
-}
-
-TEST_CASE("Race returns the first resolved alternative", "[Promise]") {
-   auto [pending, resolve, reject] = promise::Create<std::string>();
-   auto raced                      = promise::Race(Promise<int>::Resolve(7), pending);
-
-   REQUIRE(raced.Resolved());
-   REQUIRE(std::holds_alternative<int>(raced.Value()));
-   REQUIRE(std::get<int>(raced.Value()) == 7);
-
-   REQUIRE((*resolve)("late"));
-   REQUIRE_FALSE((*reject)(std::make_exception_ptr(TestError{"ignored"})));
-}
-
-TEST_CASE("Race rejection flows through Catch into optional variant", "[Promise]") {
-   auto [delay, resolve, reject] = promise::Create<void>();
-
-   auto raced = promise::Race(
-                  WPromise{[]() -> Promise<double> {
-                     throw TestError("race failure");
-                     co_return 0.0;
-                  }},
-                  WPromise{[&delay]() -> Promise<double> {
-                     co_await delay;
-                     co_return 2.0;
-                  }},
-                  WPromise{[&delay]() -> Promise<int> {
-                     co_await delay;
-                     co_return 3;
-                  }}
-   )
-                  .Catch([](TestError const& exception) {
-                     REQUIRE(std::string{exception.what()} == "race failure");
-                  })
-                  .Then([](std::optional<std::variant<double, int>> const& value) {
-                     return !value.has_value();
-                  });
-
-   REQUIRE(raced.Resolved());
-   REQUIRE(raced.Value());
-
-   REQUIRE((*resolve)());
-   REQUIRE_FALSE((*reject)(std::make_exception_ptr(TestError{"ignored"})));
 }

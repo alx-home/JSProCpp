@@ -151,6 +151,12 @@ private:
    friend class details::Promise<T, false>;
    friend class promise::Handle<T, false>;
    friend class promise::ValuePromise<T>;
+
+   /** @brief Grants the enclosing Resolver<T> access to PromiseType's private members.
+    *
+    * @warning For testing purposes only - this is not intended for general use.
+    */
+   friend struct ::promise::Test;
 };
 
 }  // namespace promise

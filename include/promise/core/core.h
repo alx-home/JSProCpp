@@ -34,6 +34,11 @@ SOFTWARE.
 #include <stdexcept>
 
 namespace promise {
+/** @brief Test structure for accessing private members of promise classes.
+ *
+ * @warning For testing purposes only - this is not intended for general use.
+ */
+struct Test;
 
 /**
  * @brief Base exception type used by the promise helpers.

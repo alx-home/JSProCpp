@@ -81,3 +81,54 @@ inline Promise<void>
 CoroutineVoid() {
    co_return;
 }
+
+namespace promise {
+struct Test {
+   template <class T, bool WITH_RESOLVER>
+   using handle_type = typename details::Promise<T, WITH_RESOLVER>::handle_type;
+
+   template <class T, bool WITH_RESOLVER>
+   static std::shared_ptr<promise::details::Promise<T, WITH_RESOLVER>> Create() {
+      struct MakeUniqueFriend : details::Promise<T, WITH_RESOLVER> {
+         MakeUniqueFriend(details::Promise<T, WITH_RESOLVER>::handle_type handle)
+            : details::Promise<T, WITH_RESOLVER>(std::move(handle)) {}
+      };
+
+      auto promise = std::make_shared<MakeUniqueFriend>(handle_type<T, WITH_RESOLVER>{});
+
+      auto [resolver, resolve, reject] = promise::Resolver<T>::Create();
+
+      if constexpr (!WITH_RESOLVER) {
+         resolver->resolved_ = true;
+         if constexpr (std::is_void_v<T>) {
+            resolver->value_is_set_ = true;
+         } else {
+            resolver->value_ = std::make_unique<T>();
+         }
+      }
+
+      resolver->promise_ = promise;
+      promise->resolver_ = std::move(resolver);
+
+      return promise;
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool await_ready(promise::details::Promise<T, WITH_RESOLVER>& promise) {
+      return promise.await_ready();
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool
+   await_suspend(promise::details::Promise<T, WITH_RESOLVER>& promise, std::coroutine_handle<> h) {
+      return promise.await_suspend(h);
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static auto await_resume(promise::details::Promise<T, WITH_RESOLVER>& promise) {
+      return promise.await_resume();
+   }
+};
+}  // namespace promise
+
+using TestHelper = promise::Test;
