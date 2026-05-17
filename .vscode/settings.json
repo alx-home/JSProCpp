@@ -51,7 +51,8 @@
                            ["Branches"],
                            ["DeepBranches"],
                            ["RValue"],
-                           ["UnitTest"]
+                           ["UnitTest"],
+                           ["Scenario"]
                         ],
                         "label": "${tags}",
                         "groupUngroupedTo": "Misc"

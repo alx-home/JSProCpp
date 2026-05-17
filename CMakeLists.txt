@@ -66,6 +66,7 @@ win32_library(TARGET_NAME alx-home_promise
   src/Reject.cpp
   src/Resolve.cpp
   src/Promise.cpp
+  src/PromiseExplicitInstantiations.cpp
   src/CVPromise.cpp
   src/StatePromise.cpp
   src/MessageQueue.cpp

@@ -27,6 +27,7 @@ SOFTWARE.
 #include "concepts.inl"
 
 #include <cassert>
+#include <memory>
 
 namespace promise {
 class Reject;
@@ -131,5 +132,7 @@ namespace promise {
  * @return Tuple of (promise, resolve handle, reject handle).
  */
 template <class T>
-static constexpr auto Create();
+static constexpr std::
+  tuple<details::WPromise<T>, std::shared_ptr<Resolve<T>>, std::shared_ptr<Reject>>
+  Create();
 }  // namespace promise

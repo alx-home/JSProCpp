@@ -10,7 +10,6 @@
 #include <promise/MessageQueue.h>
 #include <promise/Pool.h>
 #include <promise/StatePromise.h>
-#include <promise/promise.h>
 
 #include <chrono>
 #include <exception>
@@ -195,6 +194,23 @@ struct Test {
    template <class T, bool WITH_RESOLVER>
    static auto await_resume(promise::details::Promise<T, WITH_RESOLVER>& promise) {
       return promise.await_resume();
+   }
+
+   template <class T, bool WITH_RESOLVER, class FUN, class... ARGS>
+   static auto
+   Then(promise::details::Promise<T, WITH_RESOLVER>& promise, FUN&& func, ARGS&&... args) {
+      return promise.Then(std::forward<FUN>(func), std::forward<ARGS>(args)...);
+   }
+
+   template <class T, bool WITH_RESOLVER, class FUN, class... ARGS>
+   static auto
+   Catch(promise::details::Promise<T, WITH_RESOLVER>& promise, FUN&& func, ARGS&&... args) {
+      return promise.Catch(std::forward<FUN>(func), std::forward<ARGS>(args)...);
+   }
+
+   template <class T, bool WITH_RESOLVER, class FUN>
+   static auto Finally(promise::details::Promise<T, WITH_RESOLVER>& promise, FUN&& func) {
+      return promise.Finally(std::forward<FUN>(func));
    }
 };
 }  // namespace promise
