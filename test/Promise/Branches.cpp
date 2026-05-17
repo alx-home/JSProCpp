@@ -69,3 +69,39 @@ TEST_CASE("Finally async failure overrides previous rejection", "[Promise][Branc
    REQUIRE(p.Rejected());
    RequireException<FinallyError>(p.Exception());
 }
+
+TEST_CASE(
+  "Then on rejected lvalue void promise with async continuation keeps rejection",
+  "[Promise][Branches]"
+) {
+   auto rejected_source = Promise<void>::Reject<TestError>("then rejected lvalue");
+
+   auto chained = rejected_source.Then([]() -> Promise<int> { co_return 1; });
+
+   REQUIRE(chained.Rejected());
+   RequireException<TestError>(chained.Exception());
+}
+
+TEST_CASE(
+  "Finally on resolved lvalue value promise with async continuation preserves value",
+  "[Promise][Branches]"
+) {
+   auto resolved_source = Promise<int>::Resolve(55);
+
+   auto chained = resolved_source.Finally([]() -> Promise<void> { co_return; });
+
+   REQUIRE(chained.Resolved());
+   REQUIRE(chained.Value() == 55);
+}
+
+TEST_CASE(
+  "Catch on rejected lvalue value promise with void handler resolves empty optional",
+  "[Promise][Branches]"
+) {
+   auto rejected_source = Promise<int>::Reject<TestError>("catch void lvalue");
+
+   auto recovered = rejected_source.Catch([](TestError const&) {});
+
+   REQUIRE(recovered.Resolved());
+   REQUIRE_FALSE(recovered.Value().has_value());
+}

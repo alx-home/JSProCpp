@@ -136,3 +136,16 @@ TEST_CASE("Pool delay overload wrappers keep behavior", "[Pool]") {
       RequireException<QueueStopped>(stopped_value.Exception());
    });
 }
+
+TEST_CASE("Pool value Dispatch captures thrown exception", "[Pool]") {
+   RunWithTimeout(2s, [&] {
+      promise::Pool<2> pool{"value-throw-path"};
+
+      std::function<int()> throwing_fun = []() -> int { throw TestError{"pool value throw"}; };
+      auto                 promise      = pool.Dispatch(std::move(throwing_fun));
+
+      promise.WaitDone();
+      REQUIRE(promise.Rejected());
+      RequireException<TestError>(promise.Exception());
+   });
+}
