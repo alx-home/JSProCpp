@@ -397,8 +397,9 @@ namespace promise {
  * @return Tuple (promise, resolve, reject).
  */
 template <class T>
-static constexpr auto
-Create() {
+static constexpr std::
+  tuple<details::WPromise<T>, std::shared_ptr<Resolve<T>>, std::shared_ptr<Reject>>
+  Create() {
    return details::Promise<T>::Create();
 }
 

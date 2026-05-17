@@ -26,10 +26,14 @@ SOFTWARE.
 
 #include "core.h"
 
-#include "details/helpers.inl"
-#include "details/Resolver.inl"
-#include "details/Resolve.inl"
-#include "details/Reject.inl"
-#include "details/WPromise.inl"
-#include "details/Handle.inl"
-#include "details/Promise.inl"
+#ifndef PROMINSE_NO_INSTANTIATION_
+
+#   include "details/helpers.inl"
+#   include "details/Resolver.inl"
+#   include "details/Resolve.inl"
+#   include "details/Reject.inl"
+#   include "details/WPromise.inl"
+#   include "details/Handle.inl"
+#   include "details/Promise.inl"
+
+#endif  // PROMINSE_NO_INSTANTIATION_

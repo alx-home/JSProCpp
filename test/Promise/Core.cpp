@@ -670,3 +670,89 @@ TEST_CASE("Resolver-backed pending chains exercise WITH_RESOLVER branches", "[Pr
       REQUIRE(resolver_reject_finally_ran);
    });
 }
+
+TEST_CASE("Details Promise static forwarding for resolver-less mode", "[Promise][Core]") {
+   RunWithTimeout(2s, [&] {
+      auto [created, resolve_created, reject_created] =
+        promise::details::Promise<int, false>::Create();
+
+      REQUIRE_FALSE(created.Done());
+      REQUIRE((*resolve_created)(55));
+      REQUIRE_FALSE((*reject_created)(std::make_exception_ptr(TestError{"ignored"})));
+      REQUIRE(created.Resolved());
+      REQUIRE(created.Value() == 55);
+
+      auto resolved_via_false_details = promise::details::Promise<int, false>::Resolve(77);
+      REQUIRE(resolved_via_false_details.Resolved());
+      REQUIRE(resolved_via_false_details.Value() == 77);
+
+      auto rejected_via_false_details =
+        promise::details::Promise<int, false>::Reject<TestError>("forwarded reject");
+      REQUIRE(rejected_via_false_details.Rejected());
+      RequireException<TestError>(rejected_via_false_details.Exception());
+   });
+}
+
+TEST_CASE("Done Then sync-throw paths reject correctly", "[Promise][Core]") {
+   RunWithTimeout(2s, [&] {
+      auto value_then_throw = Promise<int>::Resolve(4).Then([](int) -> int {
+         throw CatchError{"done value then throw"};
+      });
+      REQUIRE(value_then_throw.Rejected());
+      RequireException<CatchError>(value_then_throw.Exception());
+
+      auto void_then_throw =
+        Promise<void>::Resolve().Then([]() { throw CatchError{"done void then throw"}; });
+      REQUIRE(void_then_throw.Rejected());
+      RequireException<CatchError>(void_then_throw.Exception());
+   });
+}
+
+TEST_CASE("Done Finally sync throw overrides source state", "[Promise][Core]") {
+   RunWithTimeout(2s, [&] {
+      auto resolved_then_throw =
+        Promise<int>::Resolve(1).Finally([] { throw FinallyError{"finally overrides resolve"}; });
+      REQUIRE(resolved_then_throw.Rejected());
+      RequireException<FinallyError>(resolved_then_throw.Exception());
+
+      auto rejected_then_throw = Promise<int>::Reject<TestError>("base reject").Finally([] {
+         throw FinallyError{"finally overrides reject"};
+      });
+      REQUIRE(rejected_then_throw.Rejected());
+      RequireException<FinallyError>(rejected_then_throw.Exception());
+   });
+}
+
+TEST_CASE("Done Catch handler throw and mismatch branches", "[Promise][Core]") {
+   RunWithTimeout(2s, [&] {
+      auto done_catch_throw =
+        Promise<int>::Reject<TestError>("done catch throw").Catch([](TestError const&) -> int {
+           throw CatchError{"catch handler throw"};
+        });
+      REQUIRE(done_catch_throw.Rejected());
+      RequireException<CatchError>(done_catch_throw.Exception());
+
+      auto done_mismatch_passthrough =
+        Promise<int>::Reject<CatchError>("mismatch").Catch([](TestError const&) -> int {
+           return 1;
+        });
+      REQUIRE(done_mismatch_passthrough.Rejected());
+      RequireException<CatchError>(done_mismatch_passthrough.Exception());
+
+      auto done_exception_ptr_throw =
+        Promise<int>::Reject<TestError>("ptr throw").Catch([](std::exception_ptr) -> int {
+           throw CatchError{"ptr handler throw"};
+        });
+      REQUIRE(done_exception_ptr_throw.Rejected());
+      RequireException<CatchError>(done_exception_ptr_throw.Exception());
+   });
+}
+
+TEST_CASE("Done Finally async branches on resolved and rejected sources", "[Promise][Core]") {
+   RunWithTimeout(2s, [&] {
+      auto done_resolved_async =
+        Promise<int>::Resolve(9).Finally([]() -> Promise<void> { co_return; });
+      REQUIRE(done_resolved_async.Resolved());
+      REQUIRE(done_resolved_async.Value() == 9);
+   });
+}
