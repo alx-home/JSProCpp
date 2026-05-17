@@ -16,32 +16,31 @@
          "group": "build"
       },
       {
-         "label": "Run act gcov coverage",
+         "label": "Run act PR",
          "type": "shell",
          "command": "act",
          "args": [
             "workflow_dispatch",
             "-W",
-            ".github/workflows/gcov-coverage.yml",
+            ".github/workflows/pr-tests.yml",
             "-P",
             "ubuntu-24.04=catthehacker/ubuntu:act-latest",
             "-j",
-            "gcov-coverage"
+            "promise-tests"
          ],
          "isBackground": false,
          "group": "build"
       },
       {
-         "label": "Unzip gcov coverage results",
+         "label": "Generate Coverage",
          "type": "shell",
          "command": "powershell",
          "args": [
             "-Command",
-            "Expand-Archive -Path artifacts/1/promise-gcov-files/promise-gcov-files.zip -DestinationPath artifacts/1/promise-gcov-files/unzipped -Force"
+            "Expand-Archive -Path build/artifacts/1/promise-coverage/promise-coverage.zip -DestinationPath build/gcov/ -Force"
          ],
          "problemMatcher": [],
-         "group": "test",
-         "dependsOn": ["Run act gcov coverage"]
+         "group": "test"
       }
    ]
 }

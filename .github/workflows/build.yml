@@ -8,6 +8,10 @@ on:
       - "*"
   workflow_dispatch:
 
+env:
+  COVERAGE_LINE_MIN: "75"
+  COVERAGE_BRANCH_MIN: "33"
+
 jobs:
   build:
     name: Build, test, coverage and analyze
@@ -53,18 +57,23 @@ jobs:
           gcovr \
             --root . \
             --object-directory build \
+            --filter 'include/.*' \
+            --filter 'src/.*' \
+            --exclude 'test/.*' \
             --exclude 'build/CMakeFiles/[0-9]' \
             --exclude 'build/' \
             --gcov-executable gcov-14 \
             --gcov-ignore-errors=all \
-            --sonarqube-metric line \
+            --print-summary \
+            --txt coverage/gcovr-summary.txt \
             --sonarqube coverage/sonar-coverage.xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: promise-sonarqube-coverage
-          path: coverage/sonar-coverage.xml
+          path: |
+            coverage/*
 
       - name: Decode certificate
         if: ${{ !env.ACT }}
