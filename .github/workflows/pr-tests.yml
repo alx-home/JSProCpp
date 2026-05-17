@@ -75,6 +75,9 @@ jobs:
           gcovr \
             --root . \
             --merge-lines \
+            --exclude-unreachable-branches \
+            --exclude-throw-branches \
+            --exclude-noncode-lines \
             --object-directory build \
             --filter 'include/.*' \
             --filter 'src/.*' \
@@ -86,6 +89,8 @@ jobs:
             --print-summary \
             --txt coverage/coverage.txt \
             --sonarqube coverage/sonar-coverage.xml \
+            --html-block-ids \
+            --html-theme github.dark-blue \
             --html=coverage/html/coverage.html \
             --html-details=coverage/html/coverage-details.html \
             --xml -o coverage/coverage.xml \
