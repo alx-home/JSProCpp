@@ -26,7 +26,7 @@
             "-P",
             "ubuntu-24.04=catthehacker/ubuntu:act-latest",
             "-j",
-            "promise-tests"
+            "enforce-coverage"
          ],
          "isBackground": false,
          "group": "build"

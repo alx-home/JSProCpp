@@ -6,6 +6,11 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 env:
   COVERAGE_LINE_MIN: "75"
   COVERAGE_BRANCH_MIN: "33"
@@ -64,19 +69,15 @@ jobs:
             --gcov-executable gcov-14 \
             --gcov-ignore-errors=all \
             --print-summary \
-            --fail-under-line ${COVERAGE_LINE_MIN} \
-            --fail-under-branch ${COVERAGE_BRANCH_MIN} \
             --txt coverage/coverage.txt \
             --sonarqube coverage/sonar-coverage.xml \
             --html=coverage/html/coverage.html \
             --html-details=coverage/html/coverage-details.html \
             --xml -o coverage/coverage.xml \
-            --json coverage/coverage.json
-
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+            --json coverage/coverage.json \
+            | tee coverage/summary.txt
 
       - name: Upload coverage artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: promise-coverage
@@ -84,27 +85,19 @@ jobs:
             coverage/*
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: ${{ github.event_name == 'pull_request' }}
         uses: codecov/codecov-action@v4
         with:
           files: coverage/coverage.json
           fail_ci_if_error: false
 
-      - name: Fail if coverage is too low
-        if: steps.coverage.outputs.exit_code != '0'
-        run: |
-          echo "Coverage threshold not met"
-          exit 1
-
   deploy-coverage:
     name: Deploy PR Coverage to GitHub Pages
     needs: promise-tests
-    if: always() && github.event_name == 'pull_request'
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
       # Download the coverage HTML generated earlier
       - name: Download coverage artifact
         uses: actions/download-artifact@v4
@@ -136,6 +129,59 @@ jobs:
           message: |
             📊 **Coverage report for this PR**
             👉 https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/index.html
+
+  enforce-coverage:
+    name: Enforce Coverage Thresholds
+    needs: promise-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: promise-coverage
+          path: coverage
+
+      - name: Check coverage thresholds
+        run: |
+          LINE=$(grep "lines:" coverage/summary.txt | awk '{print $2}' | tr -d '%')
+          BRANCH=$(grep "branches:" coverage/summary.txt | awk '{print $2}' | tr -d '%')
+
+          echo "Detected line coverage:    $LINE%"
+          echo "Detected branch coverage:  $BRANCH%"
+          echo "Required line coverage:    $COVERAGE_LINE_MIN%"
+          echo "Required branch coverage:  $COVERAGE_BRANCH_MIN%"
+          echo ""
+
+          FAILED=0
+
+          if (( $(echo "$LINE < $COVERAGE_LINE_MIN" | bc -l) )); then
+            echo "❌ Line coverage too low: $LINE% < $COVERAGE_LINE_MIN%"
+            FAILED=1
+          else
+            echo "✅ Line coverage OK"
+          fi
+
+          if (( $(echo "$BRANCH < $COVERAGE_BRANCH_MIN" | bc -l) )); then
+            echo "❌ Branch coverage too low: $BRANCH% < $COVERAGE_BRANCH_MIN%"
+            FAILED=1
+          else
+            echo "✅ Branch coverage OK"
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "🚨 Coverage thresholds NOT met"
+            exit 1
+          fi
+
+          echo ""
+          echo "🎉 Coverage thresholds met successfully"
 
   linux-release-gcc:
     name: Linux Release with gcc-14
