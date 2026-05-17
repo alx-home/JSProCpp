@@ -88,6 +88,9 @@ struct Test {
    using handle_type = typename details::Promise<T, WITH_RESOLVER>::handle_type;
 
    template <class T, bool WITH_RESOLVER>
+   using promise_type = promise::details::Promise<T, WITH_RESOLVER>;
+
+   template <class T, bool WITH_RESOLVER>
    static std::shared_ptr<promise::details::Promise<T, WITH_RESOLVER>> Create() {
       struct MakeUniqueFriend : details::Promise<T, WITH_RESOLVER> {
          MakeUniqueFriend(details::Promise<T, WITH_RESOLVER>::handle_type handle)
@@ -111,6 +114,71 @@ struct Test {
       promise->resolver_ = std::move(resolver);
 
       return promise;
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static std::shared_ptr<promise::details::Promise<T, WITH_RESOLVER>> CreatePending() {
+      auto promise                   = Create<T, WITH_RESOLVER>();
+      promise->resolver_->resolved_  = false;
+      promise->resolver_->exception_ = nullptr;
+
+      if constexpr (std::is_void_v<T>) {
+         promise->resolver_->value_is_set_ = false;
+      } else {
+         promise->resolver_->value_.reset();
+      }
+
+      return promise;
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static std::size_t RegisterAwaitFunction(
+     promise::details::Promise<T, WITH_RESOLVER>& promise,
+     std::function<void()>                        fun
+   ) {
+      std::unique_lock lock{promise.mutex_};
+      return promise.Await(std::move(fun), lock);
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool
+   UnregisterAwaitFunction(promise::details::Promise<T, WITH_RESOLVER>& promise, std::size_t id) {
+      std::unique_lock lock{promise.mutex_};
+      return promise.UnAwait(id, lock);
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static std::size_t Awaiters(promise::details::Promise<T, WITH_RESOLVER> const& promise) {
+      return promise.Awaiters();
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static std::size_t UseCount(promise::details::Promise<T, WITH_RESOLVER> const& promise) {
+      return promise.UseCount();
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool IsResolved(promise::details::Promise<T, WITH_RESOLVER> const& promise) {
+      std::shared_lock lock{promise.mutex_};
+      return promise.IsResolved(lock);
+   }
+
+   template <class T, bool WITH_RESOLVER, class VALUE>
+      requires(!std::is_void_v<T>)
+   static bool Resolve(promise::details::Promise<T, WITH_RESOLVER>& promise, VALUE&& value) {
+      return promise.resolver_->Resolve(std::forward<VALUE>(value));
+   }
+
+   template <class T, bool WITH_RESOLVER>
+      requires(std::is_void_v<T>)
+   static bool Resolve(promise::details::Promise<T, WITH_RESOLVER>& promise) {
+      return promise.resolver_->Resolve();
+   }
+
+   template <class T, bool WITH_RESOLVER>
+   static bool
+   Reject(promise::details::Promise<T, WITH_RESOLVER>& promise, std::exception_ptr exception) {
+      return promise.resolver_->Reject(std::move(exception));
    }
 
    template <class T, bool WITH_RESOLVER>
