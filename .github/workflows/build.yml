@@ -8,6 +8,13 @@ on:
       - "*"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   COVERAGE_LINE_MIN: "75"
   COVERAGE_BRANCH_MIN: "33"
@@ -16,14 +23,23 @@ jobs:
   build:
     name: Build, test, coverage and analyze
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install build and coverage tools
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build gcc-14 g++-14
           python3 -m venv .venv
@@ -52,6 +68,7 @@ jobs:
 
       - name: Generate SonarQube coverage report
         run: |
+          set -euo pipefail
           source .venv/bin/activate
           mkdir -p coverage
           gcovr \
@@ -69,28 +86,37 @@ jobs:
             --sonarqube coverage/sonar-coverage.xml
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: promise-sonarqube-coverage
+          if-no-files-found: error
           path: |
             coverage/*
 
       - name: Decode certificate
-        if: ${{ !env.ACT }}
         run: |
-          echo ${SONAR_CERT} | base64 -d > /tmp/certs.p12
+          set -euo pipefail
+          if [ "${ACT:-}" = "true" ]; then
+            echo "Skipping certificate decode under act"
+            exit 0
+          fi
+          printf '%s' "$SONAR_CERT" | base64 -d > /tmp/certs.p12
         env:
           SONAR_CERT: ${{ secrets.SONAR_CERT }}
 
       - name: Patch sonar-project.properties for act
-        if: ${{ env.ACT }}
         run: |
+          set -euo pipefail
+          if [ "${ACT:-}" != "true" ]; then
+            echo "Skipping act-specific sonar patch on GitHub runner"
+            exit 0
+          fi
           sed -i '/^sonar\.clientcert/d' sonar-project.properties
           sed -i '/^sonar\.scanner\.key/d' sonar-project.properties
           echo "sonar.scm.disabled=true" >> sonar-project.properties
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -99,14 +125,23 @@ jobs:
   linux-release-gcc:
     name: Linux Release with gcc-14
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install build tools
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build gcc-14 g++-14
 
@@ -126,6 +161,7 @@ jobs:
 
       - name: Collect release library artifacts
         run: |
+          set -euo pipefail
           mkdir -p release-artifacts
           find build-release -type f \( -name "*.a" -o -name "*.so" -o -name "*.dylib" \) -print0 | while IFS= read -r -d '' lib; do
             cp "$lib" release-artifacts/
@@ -133,22 +169,32 @@ jobs:
           test -n "$(ls -A release-artifacts)"
 
       - name: Upload release library artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: promise-release-linux-gcc-${{ github.ref_name }}
+          if-no-files-found: error
           path: release-artifacts/
 
   linux-release-clang:
     name: Linux Release with clang
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install build tools
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build clang
 
@@ -168,6 +214,7 @@ jobs:
 
       - name: Collect release library artifacts
         run: |
+          set -euo pipefail
           mkdir -p release-artifacts
           find build-release -type f \( -name "*.a" -o -name "*.so" -o -name "*.dylib" \) -print0 | while IFS= read -r -d '' lib; do
             cp "$lib" release-artifacts/
@@ -175,19 +222,24 @@ jobs:
           test -n "$(ls -A release-artifacts)"
 
       - name: Upload release library artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: promise-release-linux-clang-${{ github.ref_name }}
+          if-no-files-found: error
           path: release-artifacts/
 
   windows-release-clang-cl:
     name: Windows Release with clang-cl
     runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Ninja and LLVM
         run: |
@@ -219,19 +271,24 @@ jobs:
         shell: cmd
 
       - name: Upload Windows release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: promise-release-windows-clang-cl-${{ github.ref_name }}
+          if-no-files-found: error
           path: release-artifacts-windows/
 
   windows-release-msvc:
     name: Windows Release with cl.exe (MSVC)
     runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Ninja
         run: choco install -y ninja
@@ -271,7 +328,8 @@ jobs:
         shell: cmd
 
       - name: Upload Windows release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: promise-release-windows-msvc-${{ github.ref_name }}
+          if-no-files-found: error
           path: release-artifacts-msvc/
