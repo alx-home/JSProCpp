@@ -73,6 +73,7 @@ jobs:
           mkdir -p coverage
           gcovr \
             --root . \
+            --merge-lines \
             --object-directory build \
             --filter 'include/.*' \
             --filter 'src/.*' \

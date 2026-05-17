@@ -71,8 +71,10 @@ jobs:
           set -euo pipefail
           source .venv/bin/activate
           mkdir -p coverage/html
+
           gcovr \
             --root . \
+            --merge-lines \
             --object-directory build \
             --filter 'include/.*' \
             --filter 'src/.*' \
