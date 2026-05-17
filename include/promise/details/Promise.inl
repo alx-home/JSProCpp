@@ -742,13 +742,10 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
    auto apply_exception = [](auto&& reject, auto&& func, std::exception_ptr exception) {
       if constexpr (IS_PROMISE_FUNCTION<FUN>) {
          MakePromise(std::forward<FUN>(func))
-           .Then([reject    = std::forward<decltype(reject)>(reject),
-                  exception = std::move(exception)]() constexpr {
+           .Then([reject, exception = std::move(exception)]() constexpr {
               (*reject)(std::move(exception));
            })
-           .Catch([reject = std::forward<decltype(reject)>(reject)](std::exception_ptr exception) {
-              (*reject)(std::move(exception));
-           })
+           .Catch([reject](std::exception_ptr exception) { (*reject)(std::move(exception)); })
            .Detach();
       } else {
          try {
