@@ -181,12 +181,12 @@ Add `promise` directly to your CMake project:
 include(FetchContent)
 
 FetchContent_Declare(
-	alx_home_promise
+	JSProCpp
 	GIT_REPOSITORY https://github.com/alx-home/JSProCpp.git
 	GIT_TAG release
 )
 
-FetchContent_MakeAvailable(alx_home_promise)
+FetchContent_MakeAvailable(JSProCpp)
 
 target_link_libraries(your_target PRIVATE alx-home::promise)
 ```
