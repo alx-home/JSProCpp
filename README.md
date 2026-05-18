@@ -1,6 +1,6 @@
 <p align="center">
-    <a style="text-decoration: none; display: inline-block;" href="https://github.com/alx-home/promise/actions/workflows/build.yml">
-        <img alt="Build" src="https://github.com/alx-home/promise/actions/workflows/build.yml/badge.svg">
+    <a style="text-decoration: none; display: inline-block;" href="https://github.com/alx-home/JSProCPP/actions/workflows/build.yml">
+        <img alt="Build" src="https://github.com/alx-home/JSProCPP/actions/workflows/build.yml/badge.svg">
     </a>
     <a style="text-decoration: none; display: inline-block;" href="https://sonarqube.alex-home.fr/dashboard?id=alx-home_promise_4d0d1d2f-bd15-4ba9-8b0e-1b25f4b783ce">
         <img alt="Quality Gate Status" src="https://sonarqube.alex-home.fr/api/project_badges/measure?project=alx-home_promise_4d0d1d2f-bd15-4ba9-8b0e-1b25f4b783ce&metric=alert_status&token=sqb_9fa9f23299ff58970210cbc2e5dc06ee9da6dc09">
@@ -28,7 +28,7 @@
 	<img src=".github/logo.svg" alt="alx-home promise logo" width="560">
 </p>
 
-<h1 align="center">alx-home promise</h1>
+<h1 align="center">alx-home JSProCPP</h1>
 
 <p align="center">
 <strong>JavaScript‑style Promises for modern c++23 — coroutine‑native, fully thread‑safe, and designed for human‑friendly async code.</strong>
@@ -182,7 +182,7 @@ include(FetchContent)
 
 FetchContent_Declare(
 	alx_home_promise
-	GIT_REPOSITORY https://github.com/alx-home/promise.git
+	GIT_REPOSITORY https://github.com/alx-home/JSProCpp.git
 	GIT_TAG release
 )
 
@@ -193,7 +193,7 @@ target_link_libraries(your_target PRIVATE alx-home::promise)
 
 ### Usage examples
 
-Usage examples can be found at: https://github.com/alx-home/promise_exemples
+Usage examples can be found at: https://github.com/alx-home/JSProCPP_exemples
 
 > ⚠️ Warning: that example repository has not been formally reviewed and was generated with Copilot assistance.
 
