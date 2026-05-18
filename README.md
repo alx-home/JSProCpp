@@ -28,7 +28,7 @@
 	<img src=".github/logo.svg" alt="alx-home promise logo" width="560">
 </p>
 
-<h1 align="center">alx-home JSProCPP</h1>
+<h1 align="center">alx-home JSProCpp</h1>
 
 <p align="center">
 <strong>JavaScript‑style Promises for modern c++23 — coroutine‑native, fully thread‑safe, and designed for human‑friendly async code.</strong>
