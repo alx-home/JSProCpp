@@ -143,9 +143,9 @@ cmake --build build
 Example CMake usage:
 
 ```cmake
-find_package(alx-promise CONFIG REQUIRED)
+find_package(jsprocpp CONFIG REQUIRED)
 
-target_link_libraries(your_target PRIVATE alx-home::promise)
+target_link_libraries(your_target PRIVATE alx-home::jsprocpp)
 ```
 
 #### Option 2: `vcpkg`
@@ -165,30 +165,30 @@ cmake --build build
 Example CMake usage:
 
 ```cmake
-find_package(alx-promise CONFIG REQUIRED)
+find_package(jsprocpp CONFIG REQUIRED)
 
-target_link_libraries(your_target PRIVATE alx-home::promise)
+target_link_libraries(your_target PRIVATE alx-home::jsprocpp)
 ```
 
 #### Option 3: CMake (`FetchContent`)
 
-Add `promise` directly to your CMake project:
+Add `JSProCpp` directly to your CMake project:
 
-- If `win32_library` / `win32_executable` are not available, `promise` automatically fetches `build_tools`.
-- If `alx-home::cpp_utils` is not available, `promise` automatically fetches that dependency as well.
+- If `win32_library` / `win32_executable` are not available, `JSProCpp` automatically fetches `build_tools`.
+- If `alx-home::cpp_utils` is not available, `JSProCpp` automatically fetches that dependency as well.
 
 ```cmake
 include(FetchContent)
 
 FetchContent_Declare(
-	JSProCpp
+	jsprocpp
 	GIT_REPOSITORY https://github.com/alx-home/JSProCpp.git
 	GIT_TAG release
 )
 
-FetchContent_MakeAvailable(JSProCpp)
+FetchContent_MakeAvailable(jsprocpp)
 
-target_link_libraries(your_target PRIVATE alx-home::promise)
+target_link_libraries(your_target PRIVATE alx-home::jsprocpp)
 ```
 
 ### Usage examples
@@ -199,11 +199,11 @@ Usage examples can be found at: https://github.com/alx-home/JSProCpp_exemples
 
 ### Useful cache variables
 
-- `PROMISE_BUILD_TESTS=OFF` disables the local `promise_test` executable. This is `OFF` by default when `promise` is added as a subproject.
-- `PROMISE_FETCH_BUILD_TOOLS=OFF` means the caller must provide `win32_library` and `win32_executable`.
-- `PROMISE_BUILD_TOOLS_GIT_REPOSITORY` and `PROMISE_BUILD_TOOLS_GIT_TAG` allow pinning or mirroring the helper repository.
-- `PROMISE_FETCH_CPP_UTILS=OFF` means the caller must provide `alx-home::cpp_utils`.
-- `PROMISE_CPP_UTILS_GIT_REPOSITORY` and `PROMISE_CPP_UTILS_GIT_TAG` allow pinning or mirroring the dependency source.
+- `JSPROCPP_BUILD_TESTS=OFF` disables the local `JSProCpp_test` executable. This is `OFF` by default when `JSProCpp` is added as a subproject.
+- `JSPROCPP_FETCH_BUILD_TOOLS=OFF` means the caller must provide `win32_library` and `win32_executable`.
+- `JSPROCPP_BUILD_TOOLS_GIT_REPOSITORY` and `JSPROCPP_BUILD_TOOLS_GIT_TAG` allow pinning or mirroring the helper repository.
+- `JSPROCPP_FETCH_CPP_UTILS=OFF` means the caller must provide `alx-home::cpp_utils`.
+- `JSPROCPP_CPP_UTILS_GIT_REPOSITORY` and `JSPROCPP_CPP_UTILS_GIT_TAG` allow pinning or mirroring the dependency source.
 
 ## Quick start
 
@@ -211,8 +211,8 @@ Build from this folder:
 
 ```powershell
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build --target alx-home_promise promise_test
-./build/promise_test.exe
+cmake --build build --target jsprocpp JSProCpp_test
+./build/JSProCpp_test.exe
 ```
 
 Minimal async chain:
@@ -1029,13 +1029,13 @@ From this folder:
 
 ```powershell
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build --target alx-home_promise promise_test
+cmake --build build --target jsprocpp JSProCpp_test
 ```
 
 Run the test binary:
 
 ```powershell
-./build/promise_test.exe
+./build/JSProCpp_test.exe
 ```
 
 ## Memory checking

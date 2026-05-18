@@ -55,13 +55,13 @@ jobs:
           -DCMAKE_C_COMPILER=gcc-14
           -DCMAKE_CXX_COMPILER=g++-14
           -DCMAKE_BUILD_TYPE=Debug
-          -DPROMISE_BUILD_TESTS=ON
+          -DJSPROCPP_BUILD_TESTS=ON
           -DCMAKE_CXX_FLAGS="-O0 --coverage -fprofile-arcs -ftest-coverage"
           -DCMAKE_EXE_LINKER_FLAGS="--coverage"
           -DCMAKE_SHARED_LINKER_FLAGS="--coverage"
 
       - name: Build tests
-        run: cmake --build build --target promise_test --config Debug
+        run: cmake --build build --target JSProCpp_test --config Debug
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
@@ -158,10 +158,10 @@ jobs:
           -DCMAKE_C_COMPILER=gcc-14
           -DCMAKE_CXX_COMPILER=g++-14
           -DCMAKE_BUILD_TYPE=Release
-          -DPROMISE_BUILD_TESTS=OFF
+          -DJSPROCPP_BUILD_TESTS=OFF
 
       - name: Build release library
-        run: cmake --build build-release --target alx-home_promise --config Release
+        run: cmake --build build-release --target jsprocpp --config Release
 
       - name: Collect release library artifacts
         run: |
@@ -211,10 +211,10 @@ jobs:
           -DCMAKE_C_COMPILER=clang
           -DCMAKE_CXX_COMPILER=clang++
           -DCMAKE_BUILD_TYPE=Release
-          -DPROMISE_BUILD_TESTS=OFF
+          -DJSPROCPP_BUILD_TESTS=OFF
 
       - name: Build release library
-        run: cmake --build build-release --target alx-home_promise --config Release
+        run: cmake --build build-release --target jsprocpp --config Release
 
       - name: Collect release library artifacts
         run: |
@@ -260,11 +260,11 @@ jobs:
             -DCMAKE_C_COMPILER=clang-cl ^
             -DCMAKE_CXX_COMPILER=clang-cl ^
             -DCMAKE_BUILD_TYPE=Release ^
-            -DPROMISE_BUILD_TESTS=OFF
+            -DJSPROCPP_BUILD_TESTS=OFF
         shell: cmd
 
       - name: Build Windows release library
-        run: cmake --build build-windows --config Release --target alx-home_promise
+        run: cmake --build build-windows --config Release --target jsprocpp
         shell: cmd
 
       - name: Collect Windows release artifacts
@@ -314,7 +314,7 @@ jobs:
             -DCMAKE_C_COMPILER=cl.exe ^
             -DCMAKE_CXX_COMPILER=cl.exe ^
             -DCMAKE_BUILD_TYPE=Release ^
-            -DPROMISE_BUILD_TESTS=OFF
+            -DJSPROCPP_BUILD_TESTS=OFF
 
       - name: Build Windows release library
         shell: cmd
@@ -322,7 +322,7 @@ jobs:
           rem locate Visual Studio again (same as above)
           for /f "usebackq delims=" %%i in (`"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
           call "%VSINSTALL%\VC\Auxiliary\Build\vcvarsall.bat" x64
-          cmake --build build-msvc --config Release --target alx-home_promise
+          cmake --build build-msvc --config Release --target jsprocpp
 
       - name: Collect Windows release artifacts
         run: |

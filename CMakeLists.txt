@@ -1,35 +1,35 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(alx-home_promise LANGUAGES CXX)
+project(JSProCpp LANGUAGES CXX)
 
 include(CMakeParseArguments)
 include(FetchContent)
 include(CTest)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  set(PROMISE_BUILD_TESTS_DEFAULT ON)
+  set(JSPROCPP_BUILD_TESTS_DEFAULT ON)
 else()
-  set(PROMISE_BUILD_TESTS_DEFAULT OFF)
+  set(JSPROCPP_BUILD_TESTS_DEFAULT OFF)
 endif()
 
-option(PROMISE_BUILD_TESTS "Build the promise test executable" ${PROMISE_BUILD_TESTS_DEFAULT})
-option(PROMISE_FETCH_BUILD_TOOLS "Fetch build_tools when win32 helper commands are unavailable" ON)
-option(PROMISE_FETCH_CPP_UTILS "Fetch cpp_utils when alx-home::cpp_utils is unavailable" ON)
+option(JSPROCPP_BUILD_TESTS "Build the JSProCpp test executable" ${JSPROCPP_BUILD_TESTS_DEFAULT})
+option(JSPROCPP_FETCH_BUILD_TOOLS "Fetch build_tools when win32 helper commands are unavailable" ON)
+option(JSPROCPP_FETCH_CPP_UTILS "Fetch cpp_utils when alx-home::cpp_utils is unavailable" ON)
 
-set(PROMISE_BUILD_TOOLS_GIT_REPOSITORY "https://github.com/alx-home/build_tools.git" CACHE STRING "Git repository used to fetch build_tools")
-set(PROMISE_BUILD_TOOLS_GIT_TAG "release" CACHE STRING "Git tag or branch used to fetch build_tools")
-set(PROMISE_CPP_UTILS_GIT_REPOSITORY "https://github.com/alx-home/cpp_utils.git" CACHE STRING "Git repository used to fetch cpp_utils")
-set(PROMISE_CPP_UTILS_GIT_TAG "2de0a62a8165439114a8d676182233281b5e4f24" CACHE STRING "Git tag or branch used to fetch cpp_utils")
+set(JSPROCPP_BUILD_TOOLS_GIT_REPOSITORY "https://github.com/alx-home/build_tools.git" CACHE STRING "Git repository used to fetch build_tools")
+set(JSPROCPP_BUILD_TOOLS_GIT_TAG "release" CACHE STRING "Git tag or branch used to fetch build_tools")
+set(JSPROCPP_CPP_UTILS_GIT_REPOSITORY "https://github.com/alx-home/cpp_utils.git" CACHE STRING "Git repository used to fetch cpp_utils")
+set(JSPROCPP_CPP_UTILS_GIT_TAG "2de0a62a8165439114a8d676182233281b5e4f24" CACHE STRING "Git tag or branch used to fetch cpp_utils")
 
 if(NOT COMMAND win32_library OR NOT COMMAND win32_executable)
-  if(NOT PROMISE_FETCH_BUILD_TOOLS)
-    message(FATAL_ERROR "win32 helper commands not found and PROMISE_FETCH_BUILD_TOOLS is OFF")
+  if(NOT JSPROCPP_FETCH_BUILD_TOOLS)
+    message(FATAL_ERROR "win32 helper commands not found and JSPROCPP_FETCH_BUILD_TOOLS is OFF")
   endif()
 
   FetchContent_Declare(
     alx_home_build_tools
-    GIT_REPOSITORY ${PROMISE_BUILD_TOOLS_GIT_REPOSITORY}
-    GIT_TAG ${PROMISE_BUILD_TOOLS_GIT_TAG}
+    GIT_REPOSITORY ${JSPROCPP_BUILD_TOOLS_GIT_REPOSITORY}
+    GIT_TAG ${JSPROCPP_BUILD_TOOLS_GIT_TAG}
   )
   FetchContent_MakeAvailable(alx_home_build_tools)
 
@@ -38,29 +38,29 @@ if(NOT COMMAND win32_library OR NOT COMMAND win32_executable)
 endif()
 
 if(NOT TARGET alx-home::cpp_utils)
-  if(NOT PROMISE_FETCH_CPP_UTILS)
-    message(FATAL_ERROR "alx-home::cpp_utils target not found and PROMISE_FETCH_CPP_UTILS is OFF")
+  if(NOT JSPROCPP_FETCH_CPP_UTILS)
+    message(FATAL_ERROR "alx-home::cpp_utils target not found and JSPROCPP_FETCH_CPP_UTILS is OFF")
   endif()
 
   FetchContent_Declare(
     alx_home_cpp_utils
-    GIT_REPOSITORY ${PROMISE_CPP_UTILS_GIT_REPOSITORY}
-    GIT_TAG ${PROMISE_CPP_UTILS_GIT_TAG}
+    GIT_REPOSITORY ${JSPROCPP_CPP_UTILS_GIT_REPOSITORY}
+    GIT_TAG ${JSPROCPP_CPP_UTILS_GIT_TAG}
   )
   FetchContent_MakeAvailable(alx_home_cpp_utils)
 endif()
 
-option(PROMISE_MEMCHECK_RELEASE "Enable promise leak detection in release mode" OFF)
-option(PROMISE_MEMCHECK_DEBUG "Enable promise leak detection in debug mode" ON)
-option(PROMISE_MEMCHECK_FULL "Dump leaked promises" ON)
+option(JSPROCPP_MEMCHECK_RELEASE "Enable JSProCpp leak detection in release mode" OFF)
+option(JSPROCPP_MEMCHECK_DEBUG "Enable JSProCpp leak detection in debug mode" ON)
+option(JSPROCPP_MEMCHECK_FULL "Dump leaked JSProCpp promises" ON)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(PROMISE_MEMCHECK ${PROMISE_MEMCHECK_DEBUG})
+  set(JSPROCPP_MEMCHECK ${JSPROCPP_MEMCHECK_DEBUG})
 else()
-  set(PROMISE_MEMCHECK ${PROMISE_MEMCHECK_RELEASE})
+  set(JSPROCPP_MEMCHECK ${JSPROCPP_MEMCHECK_RELEASE})
 endif()
 
-win32_library(TARGET_NAME alx-home_promise
+win32_library(TARGET_NAME jsprocpp
     FILES
   src/Memcheck.cpp
   src/Reject.cpp
@@ -71,35 +71,27 @@ win32_library(TARGET_NAME alx-home_promise
   src/StatePromise.cpp
   src/MessageQueue.cpp
 )
-add_library(alx-home::promise ALIAS alx-home_promise)
+add_library(alx-home::jsprocpp ALIAS jsprocpp)
 
-target_compile_features(alx-home_promise PUBLIC cxx_std_23)
+target_compile_features(jsprocpp PUBLIC cxx_std_23)
 
-target_include_directories(alx-home_promise INTERFACE
+target_include_directories(jsprocpp INTERFACE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_include_directories(alx-home_promise PRIVATE
+target_include_directories(jsprocpp PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include/promise
 )
 
-target_link_libraries(alx-home_promise PUBLIC alx-home::cpp_utils)
+target_link_libraries(jsprocpp PUBLIC alx-home::cpp_utils)
 
-if(PROMISE_BUILD_TESTS)
+if(JSPROCPP_BUILD_TESTS)
   add_subdirectory(test)
 endif()
 
-if(PROMISE_MEMCHECK)
-  target_compile_definitions(alx-home_promise PUBLIC PROMISE_MEMCHECK)
+if(JSPROCPP_MEMCHECK)
+  target_compile_definitions(jsprocpp PUBLIC JSPROCPP_MEMCHECK)
 
-  if(TARGET promise_test)
-    target_compile_definitions(promise_test PUBLIC PROMISE_MEMCHECK)
-  endif()
-
-  if(PROMISE_MEMCHECK_FULL)
-    target_compile_definitions(alx-home_promise PUBLIC PROMISE_MEMCHECK_FULL)
-
-    if(TARGET promise_test)
-      target_compile_definitions(promise_test PUBLIC PROMISE_MEMCHECK_FULL)
-    endif()
-  endif(PROMISE_MEMCHECK_FULL)
-endif(PROMISE_MEMCHECK)
+  if(JSPROCPP_MEMCHECK_FULL)
+    target_compile_definitions(jsprocpp PUBLIC JSPROCPP_MEMCHECK_FULL)
+  endif(JSPROCPP_MEMCHECK_FULL)
+endif(JSPROCPP_MEMCHECK)
