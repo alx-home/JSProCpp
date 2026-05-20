@@ -1,5 +1,5 @@
 ---
-name: release-note-since-previous-release
+name: generate-release-note
 description: "Generate a Release Note entry since the previous release."
 disable-model-invocation: true
 ---
