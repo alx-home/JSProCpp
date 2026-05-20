@@ -50,9 +50,7 @@ Handle<T, WITH_RESOLVER>::PromiseType::get_return_object() {
 template <class T, bool WITH_RESOLVER>
 typename Handle<T, WITH_RESOLVER>::PromiseType::Parent*
 Handle<T, WITH_RESOLVER>::PromiseType::GetParent() const {
-   // GCOVR_EXCL_START
    return parent_;
-   // GCOVR_EXCL_STOP
 }
 
 template <class T, bool WITH_RESOLVER>
@@ -134,9 +132,9 @@ Handle<T, WITH_RESOLVER>::PromiseType::final_suspend() noexcept {
       }
    } else if constexpr (IS_VOID && !WITH_RESOLVER) {
       parent_->resolver_->Resolve();
-   } else {  // GCOVR_EXCL_START
+   } else {
       assert(IS_VOID && "Non-void promises must return a value or throw");
-   }  // GCOVR_EXCL_STOP
+   }
 
    return {};
 }
@@ -350,9 +348,7 @@ Handle<T, WITH_RESOLVER>::Detach(std::shared_ptr<details::Promise<T, WITH_RESOLV
 template <class T, bool WITH_RESOLVER>
 void
 Handle<T, WITH_RESOLVER>::VDetach() && {
-   // GCOVR_EXCL_START
    assert(false);
-   // GCOVR_EXCL_STOP
 }
 
 template <class T, bool WITH_RESOLVER>
