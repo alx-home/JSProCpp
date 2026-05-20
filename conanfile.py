@@ -6,14 +6,14 @@ from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import collect_libs, copy, save
 
 
-class AlxPromiseConan(ConanFile):
-    name = "alx-promise"
-    version = "1.6.2"
+class JSProCppConan(ConanFile):
+    name = "jsprocpp"
+    version = "1.6.3"
     license = "MIT"
     author = "alx-home"
-    url = "https://github.com/alx-home/promise"
-    description = "A lightweight C++ promise library."
-    topics = ("cpp", "promise", "async", "alx", "alx-home")
+    url = "https://github.com/alx-home/JSProCpp"
+    description = "A lightweight JS Style C++ promise library."
+    topics = ("cpp", "promise", "async", "alx", "alx-home", "JSProCpp", "js", "js-style", "javascript", "javascript-style")
 
     settings = "os", "compiler", "build_type", "arch"
     options = {
@@ -40,7 +40,7 @@ class AlxPromiseConan(ConanFile):
             raise ConanInvalidConfiguration("memcheck_full=True requires memcheck=True")
 
     def requirements(self):
-        self.requires("alx-cpp-utils/1.1.0", transitive_headers=True)
+        self.requires("alx-cpp-utils/1.1.1", transitive_headers=True)
 
     def build_requirements(self):
         self.tool_requires("alx-build-tools/1.1.0")
@@ -72,12 +72,12 @@ class AlxPromiseConan(ConanFile):
         tc = CMakeToolchain(self)
         tc.variables["CMAKE_PROJECT_INCLUDE"] = project_include
         tc.variables["BUILD_SHARED_LIBS"] = self.options.shared
-        tc.variables["PROMISE_BUILD_TESTS"] = False
-        tc.variables["PROMISE_MEMCHECK_DEBUG"] = bool(self.options.memcheck)
-        tc.variables["PROMISE_MEMCHECK_RELEASE"] = bool(self.options.memcheck)
-        tc.variables["PROMISE_MEMCHECK_FULL"] = bool(self.options.memcheck_full)
-        tc.variables["PROMISE_FETCH_BUILD_TOOLS"] = False
-        tc.variables["PROMISE_FETCH_CPP_UTILS"] = False
+        tc.variables["JSPROCPP_BUILD_TESTS"] = False
+        tc.variables["JSPROCPP_MEMCHECK_DEBUG"] = bool(self.options.memcheck)
+        tc.variables["JSPROCPP_MEMCHECK_RELEASE"] = bool(self.options.memcheck)
+        tc.variables["JSPROCPP_MEMCHECK_FULL"] = bool(self.options.memcheck_full)
+        tc.variables["JSPROCPP_FETCH_BUILD_TOOLS"] = False
+        tc.variables["JSPROCPP_FETCH_CPP_UTILS"] = False
         tc.generate()
 
     def build(self):
@@ -102,12 +102,12 @@ class AlxPromiseConan(ConanFile):
         copy(self, "README.md", src=self.source_folder, dst=os.path.join(self.package_folder, "share", self.name))
 
     def package_info(self):
-        self.cpp_info.set_property("cmake_file_name", "alx-promise")
-        self.cpp_info.set_property("cmake_target_name", "alx-home::promise")
+        self.cpp_info.set_property("cmake_file_name", "jsprocpp")
+        self.cpp_info.set_property("cmake_target_name", "alx-home::jsprocpp")
         self.cpp_info.libs = collect_libs(self)
 
         if self.options.memcheck:
-            self.cpp_info.defines.append("PROMISE_MEMCHECK")
+            self.cpp_info.defines.append("JSPROCPP_MEMCHECK")
 
         if self.options.memcheck_full:
-            self.cpp_info.defines.append("PROMISE_MEMCHECK_FULL")
+            self.cpp_info.defines.append("JSPROCPP_MEMCHECK_FULL")
