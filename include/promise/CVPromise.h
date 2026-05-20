@@ -121,9 +121,7 @@ public:
          auto [new_promise, new_resolve, new_reject] = Promise<void>::Create();
 
          std::unique_lock lock{mutex_};
-         // GCOVR_EXCL_START
          assert(reject_);
-         // GCOVR_EXCL_STOP
 
          auto old_promise = promise_;
          auto old_reject  = reject_;
@@ -135,13 +133,9 @@ public:
          return std::make_pair(old_reject, std::move(old_promise));
       }();
 
-      // GCOVR_EXCL_START
       assert(reject);
-      // GCOVR_EXCL_STOP
       reject->template Apply<EXCEPTION>(std::forward<ARGS>(args)...);
-      // GCOVR_EXCL_START
       assert(old_promise.Done());
-      // GCOVR_EXCL_STOP
    }
 
 private:
