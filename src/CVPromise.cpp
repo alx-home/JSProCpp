@@ -23,7 +23,6 @@ SOFTWARE.
 */
 
 #include "CVPromise.h"
-#include <cassert>
 
 /** @brief Constructs a new CVPromise with a fresh promise state. */
 CVPromise::CVPromise()
@@ -53,11 +52,11 @@ CVPromise::CVPromise(
 CVPromise::~CVPromise() {
    auto const reject = [this] {
       std::shared_lock lock{mutex_};
-      assert(reject_);
+      alx_assert(reject_);
       return reject_;
    }();
 
-   assert(reject);
+   alx_assert(reject);
    reject->Apply<End>();
 }
 
@@ -98,7 +97,7 @@ CVPromise::Notify() {
       auto [new_promise, new_resolve, new_reject] = Promise<void>::Create();
 
       std::unique_lock lock{mutex_};
-      assert(resolve_);
+      alx_assert(resolve_);
 
       auto old_promise  = promise_;
       auto old_resolver = resolve_;
@@ -110,9 +109,9 @@ CVPromise::Notify() {
       return std::make_pair(old_resolver, std::move(old_promise));
    }();
 
-   assert(resolve);
+   alx_assert(resolve);
    (*resolve)();
-   assert(old_promise.Done());
+   alx_assert(old_promise.Done());
 }
 
 /** @brief Checks if the promise has been resolved. */

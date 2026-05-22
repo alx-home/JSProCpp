@@ -26,7 +26,6 @@ SOFTWARE.
 
 #include "concepts.inl"
 
-#include <cassert>
 #include <memory>
 
 namespace promise {

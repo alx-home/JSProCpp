@@ -30,7 +30,6 @@ SOFTWARE.
 #include "Reject.h"
 #include "VPromise.h"
 
-#include <cassert>
 #include <stdexcept>
 
 namespace promise {

@@ -77,7 +77,7 @@ bool
 WPromise<T>::VAwaitable::await_ready() const {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         return details->await_ready();
      },
      details_
@@ -94,7 +94,7 @@ bool
 WPromise<T>::VAwaitable::await_suspend(std::coroutine_handle<> h) const {
    return std::visit(
      [h = std::move(h)](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         return details->await_suspend(std::move(h));
      },
      details_
@@ -113,7 +113,7 @@ WPromise<T>::VAwaitable::await_resume() const noexcept(false) {
 
    std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         details->await_resume();
      },
      details_
@@ -134,7 +134,7 @@ bool
 WPromise<T>::Awaitable::await_ready() const {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         return details->await_ready();
      },
      details_
@@ -151,7 +151,7 @@ bool
 WPromise<T>::Awaitable::await_suspend(std::coroutine_handle<> h) const {
    return std::visit(
      [h = std::move(h)](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         return details->await_suspend(std::move(h));
      },
      details_
@@ -169,7 +169,7 @@ T
 WPromise<T>::Awaitable::await_resume() const noexcept(false) {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         return details->await_resume();
      },
      details_
@@ -192,7 +192,7 @@ template <class T>
 WPromise<T>::Done() const noexcept {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         std::shared_lock lock{details->mutex_};
         return details->IsDone(lock);
      },
@@ -210,7 +210,7 @@ template <class T>
 WPromise<T>::Rejected() const noexcept {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         std::shared_lock lock{details->mutex_};
         return details->IsRejected(lock);
      },
@@ -228,7 +228,7 @@ template <class T>
 WPromise<T>::Resolved() const noexcept {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         std::shared_lock lock{details->mutex_};
         return details->IsResolved(lock);
      },
@@ -248,10 +248,10 @@ template <class T>
 WPromise<T>::Value() const noexcept {
    return std::visit(
      [](auto const& details) constexpr -> cref_or_void_t<T> {
-        assert(details);
+        alx_assert(details);
         std::shared_lock lock{details->mutex_};
 
-        assert(details->IsDone(lock));
+        alx_assert(details->IsDone(lock));
         return details->GetValue(lock);
      },
      details_
@@ -268,10 +268,10 @@ template <class T>
 WPromise<T>::Exception() const noexcept {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         std::shared_lock lock{details->mutex_};
 
-        assert(details->IsDone(lock));
+        alx_assert(details->IsDone(lock));
         return details->GetException(lock);
      },
      details_
@@ -288,7 +288,7 @@ template <class T>
 WPromise<T>::Awaiters() const noexcept {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         std::shared_lock lock{details->mutex_};
         return details->Awaiters();
      },
@@ -306,7 +306,7 @@ template <class T>
 WPromise<T>::UseCount() const noexcept {
    return std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         return details->UseCount();
      },
      details_
@@ -324,7 +324,7 @@ void
 WPromise<T>::WaitAwaited(std::optional<std::size_t> current_count) const {
    std::visit(
      [current_count](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         details->WaitAwaited(current_count);
      },
      details_
@@ -339,7 +339,7 @@ void
 WPromise<T>::WaitDone() const {
    std::visit(
      [](auto const& details) constexpr {
-        assert(details);
+        alx_assert(details);
         details->WaitDone();
      },
      details_
@@ -364,7 +364,7 @@ template <class FUN, class SELF, class... ARGS>
 WPromise<T>::Then(this SELF&& self, FUN&& func, ARGS&&... args) {
    return std::visit(
      [&](auto&& details) constexpr {
-        assert(details);
+        alx_assert(details);
 
         if constexpr (std::is_lvalue_reference_v<SELF>) {
            return details->Then(
@@ -399,7 +399,7 @@ template <class FUN, class SELF, class... ARGS>
 WPromise<T>::Catch(this SELF&& self, FUN&& func, ARGS&&... args) {
    return std::visit(
      [&](auto&& details) constexpr {
-        assert(details);
+        alx_assert(details);
 
         if constexpr (std::is_lvalue_reference_v<SELF>) {
            return details->Catch(
@@ -432,7 +432,7 @@ template <class FUN, class SELF>
 WPromise<T>::Finally(this SELF&& self, FUN&& func) {
    return std::visit(
      [&](auto&& details) constexpr {
-        assert(details);
+        alx_assert(details);
 
         if constexpr (std::is_lvalue_reference_v<SELF>) {
            return details->Finally(std::function{std::forward<FUN>(func)});
@@ -467,7 +467,7 @@ WPromise<T>::Race(
 ) {
    return std::visit(
      [&](auto&& details) constexpr {
-        assert(details);
+        alx_assert(details);
 
         if constexpr (std::is_lvalue_reference_v<SELF>) {
            return details->Race(std::move(race_promise), resolve, reject);
@@ -551,7 +551,7 @@ void
 WPromise<T>::Detach() && {
    return std::visit(
      [&](auto&& details) constexpr {
-        assert(details);
+        alx_assert(details);
         auto& details_ref = *details;
         std::move(details_ref).Detach(std::move(details));
      },
@@ -626,7 +626,7 @@ IPromise<T, WITH_RESOLVER>::Detach() && {
 
    auto& details_ptr = std::get<Promise>(this->details_);
 
-   assert(details_ptr);
+   alx_assert(details_ptr);
    auto& details = *details_ptr;
    return std::move(details).Detach(std::move(details_ptr));
 }
@@ -643,7 +643,7 @@ Promise<T, WITH_RESOLVER>&
 IPromise<T, WITH_RESOLVER>::operator()(this SELF&& self) {
    using Promise = std::shared_ptr<promise::details::Promise<T, WITH_RESOLVER>>;
 
-   assert(std::holds_alternative<Promise>(self.details_));
+   alx_assert(std::holds_alternative<Promise>(self.details_));
    (*std::get<Promise>(self.details_))();
 
    if constexpr (std::is_lvalue_reference_v<SELF>) {
@@ -668,7 +668,7 @@ IPromise<T, WITH_RESOLVER>::operator()(
   std::unique_ptr<promise::Resolver<T>>&& resolver
 ) {
    using Promise = std::shared_ptr<promise::details::Promise<T, WITH_RESOLVER>>;
-   assert(std::holds_alternative<Promise>(self.details_));
+   alx_assert(std::holds_alternative<Promise>(self.details_));
    (*std::get<Promise>(self.details_))(std::move(resolver));
 
    if constexpr (std::is_lvalue_reference_v<SELF>) {

@@ -26,7 +26,6 @@ SOFTWARE.
 
 #include "../core/Promise.h"
 
-#include <cassert>
 #include <exception>
 #include <utils/Scoped.h>
 
@@ -57,10 +56,10 @@ Promise<T, WITH_RESOLVER>::Promise(handle_type handle)
 template <class T, bool WITH_RESOLVER>
 Promise<T, WITH_RESOLVER>::~Promise() {
    if (this->handle_) {
-      assert(this->self_owned_);
+      alx_assert(this->self_owned_);
    }
 
-   assert(WITH_RESOLVER || [this] constexpr {
+   alx_assert(WITH_RESOLVER || [this] constexpr {
       std::shared_lock lock{this->mutex_};
       return this->IsDone(lock);
    }());
@@ -94,7 +93,7 @@ Promise<T, WITH_RESOLVER>::await_suspend(std::coroutine_handle<> h) {
    }
 
    if constexpr (!WITH_RESOLVER) {
-      assert(this->handle_);
+      alx_assert(this->handle_);
    }
 
    Await(h, lock);
@@ -117,7 +116,7 @@ Promise<T, WITH_RESOLVER>::await_resume() noexcept(false) {
    }
 
    if constexpr (IS_VOID) {
-      assert(this->IsResolved(lock));
+      alx_assert(this->IsResolved(lock));
    } else {
       return this->GetValue(lock);
    }
@@ -144,7 +143,7 @@ template <class...>
    requires(WITH_RESOLVER)
 void
 Promise<T, WITH_RESOLVER>::operator()(std::unique_ptr<Resolver<T>>&& resolver) {
-   assert(!this->resolver_);
+   alx_assert(!this->resolver_);
    this->resolver_ = std::move(resolver);
 
    if (this->handle_) {
@@ -164,7 +163,7 @@ template <class T, bool WITH_RESOLVER>
 [[nodiscard]] std::exception_ptr const&
 Promise<T, WITH_RESOLVER>::GetException(Lock lock) const {
    (void)lock;
-   assert(this->resolver_);
+   alx_assert(this->resolver_);
    return this->resolver_->exception_;
 }
 
@@ -185,7 +184,7 @@ Promise<T, WITH_RESOLVER>::Await(std::coroutine_handle<> h, UniqueLock lock) {
    std::visit(
      [this]([[maybe_unused]] auto& lock) {
         (void)this;
-        assert(!this->IsDone(lock));
+        alx_assert(!this->IsDone(lock));
      },
      lock
    );
@@ -210,7 +209,7 @@ Promise<T, WITH_RESOLVER>::Await(std::function<void()> fun, UniqueLock lock) {
    std::visit(
      [this]([[maybe_unused]] auto& lock) {
         (void)this;
-        assert(!this->IsDone(lock));
+        alx_assert(!this->IsDone(lock));
      },
      lock
    );
@@ -460,7 +459,7 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN, class... ARGS>
 [[nodiscard]] constexpr ThenReturn<FUN>
 Promise<T, WITH_RESOLVER>::Then(std::shared_ptr<Promise>&& self, FUN&& func, ARGS&&... args) && {
-   assert(self);
+   alx_assert(self);
    ScopeExit _{[&]() { std::move(*this).Detach(std::move(self)); }};
    return self->Then(std::forward<FUN>(func), std::forward<ARGS>(args)...);
 }
@@ -681,7 +680,7 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN, class... ARGS>
 [[nodiscard]] constexpr CatchReturn<T, FUN>
 Promise<T, WITH_RESOLVER>::Catch(std::shared_ptr<Promise>&& self, FUN&& func, ARGS&&... args) && {
-   assert(self);
+   alx_assert(self);
    ScopeExit _{[&]() { std::move(*this).Detach(std::move(self)); }};
    return self->Catch(std::forward<FUN>(func), std::forward<ARGS>(args)...);
 }
@@ -804,7 +803,7 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
                  apply_value(std::move(resolve), reject, std::move(func), value);
               }
            } catch (...) {  // GCOVR_EXCL_START
-              assert(
+              alx_assert(
                 false
                 && "This shall not throw since we're already handling "
                    "exceptions, but just in "
@@ -839,7 +838,7 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN>
 [[nodiscard]] constexpr FinallyReturn<T>
 Promise<T, WITH_RESOLVER>::Finally(std::shared_ptr<Promise>&& self, FUN&& func) && {
-   assert(self);
+   alx_assert(self);
    ScopeExit _{[&]() { std::move(*this).Detach(std::move(self)); }};
    return self->Finally(std::forward<FUN>(func));
 }
@@ -935,7 +934,7 @@ Promise<T, WITH_RESOLVER>::Race(
   std::shared_ptr<promise::Resolve<T2>> const& resolve,
   std::shared_ptr<promise::Reject> const&      reject
 ) && {
-   assert(self);
+   alx_assert(self);
    ScopeExit _{[&]() { std::move(*this).Detach(std::move(self)); }};
    return self->Race(std::move(race_promise), resolve, reject);
 }
@@ -956,7 +955,7 @@ Promise<T, WITH_RESOLVER>::Create() {
       using PromisePtr = std::shared_ptr<Promise<T, WITH_RESOLVER>>;
 
       details::IPromise<T, WITH_RESOLVER> promise{handle_type{}};
-      assert(std::holds_alternative<PromisePtr>(promise.details_));
+      alx_assert(std::holds_alternative<PromisePtr>(promise.details_));
 
       auto [resolver, resolve, reject] = promise::Resolver<T>::Create();
 
@@ -1108,8 +1107,8 @@ Promise<T, WITH_RESOLVER>::Create(FUN&& func, ARGS&&... args) {
 
    {
       using PromisePtr = std::shared_ptr<Promise<T, WITH_RESOLVER>>;
-      assert(std::holds_alternative<PromisePtr>(promise.details_));
-      assert(std::get<PromisePtr>(promise.details_));
+      alx_assert(std::holds_alternative<PromisePtr>(promise.details_));
+      alx_assert(std::get<PromisePtr>(promise.details_));
 
       auto const details = std::get<PromisePtr>(promise.details_);
       resolver->promise_ = details;

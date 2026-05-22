@@ -26,7 +26,6 @@ SOFTWARE.
 
 #include "core.h"
 
-#include <cassert>
 #include <exception>
 #include <memory>
 #include <type_traits>

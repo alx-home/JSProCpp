@@ -24,7 +24,6 @@ SOFTWARE.
 
 #pragma once
 
-#include <cassert>
 #include <coroutine>
 #include <memory>
 

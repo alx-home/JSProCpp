@@ -121,7 +121,7 @@ public:
          auto [new_promise, new_resolve, new_reject] = Promise<void>::Create();
 
          std::unique_lock lock{mutex_};
-         assert(reject_);
+         alx_assert(reject_);
 
          auto old_promise = promise_;
          auto old_reject  = reject_;
@@ -133,9 +133,9 @@ public:
          return std::make_pair(old_reject, std::move(old_promise));
       }();
 
-      assert(reject);
+      alx_assert(reject);
       reject->template Apply<EXCEPTION>(std::forward<ARGS>(args)...);
-      assert(old_promise.Done());
+      alx_assert(old_promise.Done());
    }
 
 private:

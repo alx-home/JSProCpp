@@ -28,7 +28,6 @@ SOFTWARE.
 
 #include <utils/Scoped.h>
 #include <algorithm>
-#include <cassert>
 #include <exception>
 #include <memory>
 #include <mutex>
@@ -87,14 +86,14 @@ Resolver<T>::Resolve(TT&& value) {
      [&](auto&& promise_) {
         if (!resolved_.exchange(true)) {
            auto const promise = promise_.lock();
-           assert(promise);
+           alx_assert(promise);
            std::unique_lock lock{promise->mutex_};
 
-           assert(!Done());
-           assert(!exception_);
+           alx_assert(!Done());
+           alx_assert(!exception_);
            ResolverValue<T>::value_ = std::make_unique<T>(std::forward<TT>(value));
 
-           assert(promise);
+           alx_assert(promise);
            promise->OnResolved(lock);
            return true;
         }
@@ -118,14 +117,14 @@ Resolver<T>::Resolve() {
      [&](auto&& promise_) {
         if (!resolved_.exchange(true)) {
            auto const promise = promise_.lock();
-           assert(promise);
+           alx_assert(promise);
            std::unique_lock lock{promise->mutex_};
 
-           assert(!ResolverValue<T>::value_is_set_);
-           assert(!exception_);
+           alx_assert(!ResolverValue<T>::value_is_set_);
+           alx_assert(!exception_);
            ResolverValue<T>::value_is_set_ = true;
 
-           assert(promise);
+           alx_assert(promise);
            promise->OnResolved(lock);
            return true;
         }
@@ -161,14 +160,14 @@ Resolver<T>::Reject(std::exception_ptr exception) {
      [&](auto&& promise_) {
         if (!resolved_.exchange(true)) {
            auto const promise = promise_.lock();
-           assert(promise);
+           alx_assert(promise);
            std::unique_lock lock{promise->mutex_};
 
-           assert(!Done());
-           assert(!exception_);
+           alx_assert(!Done());
+           alx_assert(!exception_);
            exception_ = std::move(exception);
 
-           assert(promise);
+           alx_assert(promise);
            promise->OnResolved(lock);
            return true;
         }

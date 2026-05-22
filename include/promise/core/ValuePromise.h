@@ -28,7 +28,6 @@ SOFTWARE.
 #include "concepts.inl"
 
 #include <utils/Scoped.h>
-#include <cassert>
 #include <functional>
 #include <mutex>
 #include <shared_mutex>
@@ -87,8 +86,8 @@ public:
       requires(!IS_VOID)
    [[nodiscard]] cref_or_void_t<T> GetValue(this SELF&& self, Lock lock) {
       (void)lock;
-      assert(self.resolver_);
-      assert(self.resolver_->value_);
+      alx_assert(self.resolver_);
+      alx_assert(self.resolver_->value_);
       return *self.resolver_->value_;
    }
 
@@ -115,7 +114,7 @@ public:
       requires(!IS_VOID)
    [[nodiscard]] bool IsResolved(this SELF&& self, Lock lock) {
       (void)lock;
-      assert(self.resolver_);
+      alx_assert(self.resolver_);
       return self.resolver_->value_ != nullptr;
    }
 
@@ -130,7 +129,7 @@ public:
       requires(IS_VOID)
    [[nodiscard]] bool IsResolved(this SELF&& self, Lock lock) {
       (void)lock;
-      assert(self.resolver_);
+      alx_assert(self.resolver_);
       return self.resolver_->value_is_set_;
    }
 };

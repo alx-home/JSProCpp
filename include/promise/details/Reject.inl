@@ -26,8 +26,6 @@ SOFTWARE.
 
 #include "../core/Reject.h"
 
-#include <cassert>
-
 namespace promise {
 
 /**

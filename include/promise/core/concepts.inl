@@ -25,6 +25,12 @@ SOFTWARE.
 #pragma once
 
 #include <cassert>
+
+#define alx_assert(expr)                      \
+   {                /* // GCOVR_EXCL_START */ \
+      assert(expr); /* // GCOVR_EXCL_STOP */  \
+   }
+
 #include <functional>
 #include <optional>
 #include <type_traits>

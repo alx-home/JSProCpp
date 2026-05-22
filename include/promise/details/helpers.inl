@@ -31,7 +31,6 @@ SOFTWARE.
 #include <sys/stat.h>
 #include <utils/Scoped.h>
 #include <algorithm>
-#include <cassert>
 #include <exception>
 #include <functional>
 #include <tuple>

@@ -28,7 +28,6 @@ SOFTWARE.
 #include "Resolver.h"
 
 #include <utils/Scoped.h>
-#include <cassert>
 #include <condition_variable>
 #include <coroutine>
 #include <exception>
@@ -103,7 +102,7 @@ protected:
       template <class SELF>
       void return_void(this SELF&& self) {
          (void)self;
-         assert(!self.delayed_return_);
+         alx_assert(!self.delayed_return_);
       }
    };
 
@@ -118,7 +117,7 @@ protected:
       template <class FROM, class SELF>
          requires(std::is_convertible_v<FROM, T>)
       void return_value(this SELF&& self, FROM&& value) {
-         assert(!self.delayed_return_);
+         alx_assert(!self.delayed_return_);
          self.delayed_return_ = std::make_unique<T>(std::forward<FROM>(value));
       }
    };

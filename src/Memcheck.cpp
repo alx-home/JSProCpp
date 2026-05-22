@@ -24,11 +24,6 @@ SOFTWARE.
 
 #include "core/Memcheck.h"
 
-#include <atomic>
-#include <cassert>
-#include <iostream>
-#include <mutex>
-#include <unordered_set>
 #include <utils/Scoped.h>
 
 namespace promise {
@@ -74,7 +69,7 @@ Check::~Check() {
          std::cout << "At addr: " << ptr << std::endl;
       }
 #   endif
-      assert(false);
+      alx_assert(false);
    }
 }
 }  // namespace mmchk

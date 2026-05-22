@@ -26,8 +26,6 @@ SOFTWARE.
 
 #include "../core/Resolve.h"
 
-#include <cassert>
-
 namespace promise {
 
 /**

@@ -27,9 +27,6 @@ SOFTWARE.
 #include "VPromise.h"
 
 #include <utils/Scoped.h>
-#include <cassert>
-#include <mutex>
-#include <unordered_set>
 
 namespace promise {
 

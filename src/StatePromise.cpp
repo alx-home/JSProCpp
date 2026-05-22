@@ -23,7 +23,6 @@ SOFTWARE.
 */
 
 #include "StatePromise.h"
-#include <cassert>
 
 /** @brief Constructs a new StatePromise with a fresh promise state. */
 StatePromise::StatePromise()
@@ -65,8 +64,8 @@ StatePromise::StatePromise(
  * This unblocks waiters by transitioning internal promises to their done state.
  */
 StatePromise::~StatePromise() {
-   assert(ready_resolve_);
-   assert(done_resolve_);
+   alx_assert(ready_resolve_);
+   alx_assert(done_resolve_);
 
    (*ready_resolve_)();
    (*done_resolve_)();
@@ -123,9 +122,9 @@ StatePromise::WaitDoneWithReject() const {
  */
 void
 StatePromise::Ready() {
-   assert(ready_resolve_);
-   assert(!ready_promise_.Done());
-   assert(!done_promise_.Done());
+   alx_assert(ready_resolve_);
+   alx_assert(!ready_promise_.Done());
+   alx_assert(!done_promise_.Done());
 
    (*ready_resolve_)();
 }
@@ -133,7 +132,7 @@ StatePromise::Ready() {
 /** @brief Marks the state as done and rejects waiters with end-of-life semantics. */
 void
 StatePromise::Done() {
-   assert(done_resolve_);
+   alx_assert(done_resolve_);
 
    auto const ready_was_done = ready_promise_.Done();
    // Resolve done before ready for WaitWithReject() to reject with End() instead of resolving with
@@ -158,7 +157,7 @@ StatePromise::IsDone() const {
 void
 StatePromise::Reset() {
    if (done_promise_.Resolved()) {
-      assert(ready_promise_.Resolved());
+      alx_assert(ready_promise_.Resolved());
 
       std::tie(ready_promise_, ready_resolve_, ready_reject_) = Promise<void>::Create();
       std::tie(done_promise_, done_resolve_, done_reject_)    = Promise<void>::Create();

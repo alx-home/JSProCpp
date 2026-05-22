@@ -27,10 +27,8 @@ SOFTWARE.
 #include "core.h"
 
 #include "Handle.h"
-#include "Memcheck.h"
 
 #include <utils/Scoped.h>
-#include <cassert>
 #include <coroutine>
 #include <exception>
 #include <functional>

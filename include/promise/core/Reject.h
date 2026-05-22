@@ -25,7 +25,6 @@ SOFTWARE.
 #pragma once
 
 #include <atomic>
-#include <cassert>
 #include <exception>
 #include <functional>
 #include <memory>

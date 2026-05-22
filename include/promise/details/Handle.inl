@@ -26,7 +26,6 @@ SOFTWARE.
 
 #include "../core/Handle.h"
 
-#include <cassert>
 #include <utils/Scoped.h>
 
 namespace promise {
@@ -92,7 +91,7 @@ Handle<T, WITH_RESOLVER>::PromiseType::InitSuspend::await_resume() const noexcep
 template <class T, bool WITH_RESOLVER>
 typename Handle<T, WITH_RESOLVER>::PromiseType::InitSuspend
 Handle<T, WITH_RESOLVER>::PromiseType::initial_suspend() {
-   assert(this->parent_);
+   alx_assert(this->parent_);
    return {.self_ = *this->parent_};
 }
 
@@ -106,7 +105,7 @@ typename Handle<T, WITH_RESOLVER>::PromiseType::FinalSuspend
 Handle<T, WITH_RESOLVER>::PromiseType::final_suspend() noexcept {
    ScopeExit _{[this] constexpr {
       std::unique_lock lock{parent_->mutex_};
-      assert(parent_);
+      alx_assert(parent_);
       parent_->handle_   = nullptr;
       parent_->function_ = nullptr;
       parent_->cv_.notify_all();
@@ -126,14 +125,14 @@ Handle<T, WITH_RESOLVER>::PromiseType::final_suspend() noexcept {
          if (std::holds_alternative<std::exception_ptr>(delayed_return)) {
             parent_->resolver_->Reject(std::get<std::exception_ptr>(delayed_return));
          } else {
-            assert(!WITH_RESOLVER && "Resolver promises must not return values");
+            alx_assert(!WITH_RESOLVER && "Resolver promises must not return values");
             parent_->resolver_->Resolve(std::move(*std::get<std::unique_ptr<T>>(delayed_return)));
          }
       }
    } else if constexpr (IS_VOID && !WITH_RESOLVER) {
       parent_->resolver_->Resolve();
    } else {
-      assert(IS_VOID && "Non-void promises must return a value or throw");
+      alx_assert(IS_VOID && "Non-void promises must return a value or throw");
    }
 
    return {};
@@ -145,7 +144,7 @@ Handle<T, WITH_RESOLVER>::PromiseType::final_suspend() noexcept {
 template <class T, bool WITH_RESOLVER>
 void
 Handle<T, WITH_RESOLVER>::PromiseType::unhandled_exception() {
-   assert(!delayed_return_);
+   alx_assert(!delayed_return_);
 
    delayed_return_ = std::current_exception();
 }
@@ -209,7 +208,7 @@ template <class T, bool WITH_RESOLVER>
 template <class SELF>
 [[nodiscard]] bool
 Handle<T, WITH_RESOLVER>::IsDone(this SELF&& self, Lock lock) {
-   assert(self.resolver_);
+   alx_assert(self.resolver_);
    return self.ValuePromise::IsResolved(lock) || (self.resolver_->exception_ != nullptr);
 }
 
@@ -254,7 +253,7 @@ template <class T, bool WITH_RESOLVER>
 template <class SELF>
 [[nodiscard]] bool
 Handle<T, WITH_RESOLVER>::IsRejected(this SELF&& self, Lock) {
-   assert(self.resolver_);
+   alx_assert(self.resolver_);
    return (self.resolver_->exception_ != nullptr);
 }
 
@@ -301,7 +300,7 @@ Handle<T, WITH_RESOLVER>::OnResolved(this SELF&& self, std::unique_lock<std::sha
       std::vector<typename std::remove_cvref_t<SELF>::Awaiter> awaiters{};
 
       self.awaiters_.swap(awaiters);
-      assert(self.awaiters_.empty());
+      alx_assert(self.awaiters_.empty());
 
       auto const save_self = std::move(self.self_owned_);
       lock.unlock();
@@ -309,11 +308,11 @@ Handle<T, WITH_RESOLVER>::OnResolved(this SELF&& self, std::unique_lock<std::sha
       // We must not use self anymore !
       for (auto const& awaiter : awaiters) {
          if (std::holds_alternative<std::coroutine_handle<>>(awaiter)) {
-            assert(std::get<std::coroutine_handle<>>(awaiter));
+            alx_assert(std::get<std::coroutine_handle<>>(awaiter));
             std::get<std::coroutine_handle<>>(awaiter).resume();
          } else {
             using AwaitFunction = typename details::Promise<T, WITH_RESOLVER>::AwaitFunction;
-            assert(std::holds_alternative<AwaitFunction>(awaiter));
+            alx_assert(std::holds_alternative<AwaitFunction>(awaiter));
             std::get<AwaitFunction>(awaiter)();
          }
       }
@@ -330,9 +329,9 @@ Handle<T, WITH_RESOLVER>::OnResolved(this SELF&& self, std::unique_lock<std::sha
 template <class T, bool WITH_RESOLVER>
 details::Promise<T, WITH_RESOLVER>&
 Handle<T, WITH_RESOLVER>::Detach(std::shared_ptr<details::Promise<T, WITH_RESOLVER>>&& self) && {
-   assert(self);
+   alx_assert(self);
    std::unique_lock lock{self->mutex_};
-   // assert(!self->self_owned_); @TODO implement a refcount to detach only when
+   // alx_assert(!self->self_owned_); @TODO implement a refcount to detach only when
    // no more references to the promise details exist
 
    if (!IsDone(lock)) {
@@ -348,12 +347,12 @@ Handle<T, WITH_RESOLVER>::Detach(std::shared_ptr<details::Promise<T, WITH_RESOLV
 template <class T, bool WITH_RESOLVER>
 void
 Handle<T, WITH_RESOLVER>::VDetach() && {
-   assert(false);
+   alx_assert(false);
 }
 
 template <class T, bool WITH_RESOLVER>
 Handle<T, WITH_RESOLVER>::~Handle() {
-   assert(!this->handle_);
+   alx_assert(!this->handle_);
 }
 
 /**
