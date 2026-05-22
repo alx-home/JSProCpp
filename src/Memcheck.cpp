@@ -24,7 +24,12 @@ SOFTWARE.
 
 #include "core/Memcheck.h"
 
+#include "core/concepts.inl"
+
 #include <utils/Scoped.h>
+
+#include <iostream>
+#include <mutex>
 
 namespace promise {
 
