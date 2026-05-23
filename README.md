@@ -676,9 +676,15 @@ If you do not need to await the promise but want it to stay alive until resolved
 Use `promise::All(...)` to await every promise and collect all results in a tuple. Use
 `promise::Race(...)` to complete as soon as the first promise resolves or rejects.
 
+`promise::All` also accepts a container of `WPromise<T>` values:
+
+- `co_await promise::All(container_of_WPromise<T>)` returns `std::vector<T>`.
+- `co_await promise::All(container_of_WPromise<void>)` returns `void`.
+
 ```cpp
 #include <promise/promise.h>
 #include <variant>
+#include <vector>
 
 auto all = promise::All(
 	[]() -> Promise<int> { co_return 10; },
@@ -694,12 +700,30 @@ auto first = promise::Race(
 );
 
 auto value = co_await first; // std::variant<int, double>
+
+std::vector<WPromise<int>> group{
+	[]() -> Promise<int> { co_return 3; },
+	[]() -> Promise<int> { co_return 7; },
+	[]() -> Promise<int> { co_return 11; }
+};
+
+auto grouped = promise::All(std::move(group));
+auto values = co_await grouped; // std::vector<int>{3, 7, 11}
+
+std::vector<WPromise<void>> notifications{
+	[]() -> Promise<void> { co_return; },
+	[]() -> Promise<void> { co_return; }
+};
+
+co_await promise::All(std::move(notifications));
 ```
 
 Return-type rules for `All`:
 
 - `co_await promise::All(...)` yields a tuple of each resolved value.
 - Promises returning `void` are still awaited, but do not contribute a tuple slot.
+- For the container overload, `co_await` yields `std::vector<T>` for non-void promise values.
+- For the container overload with `WPromise<void>`, `co_await` yields `void`.
 
 Return-type rules for `Race`:
 

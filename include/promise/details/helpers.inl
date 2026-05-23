@@ -38,6 +38,7 @@ SOFTWARE.
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 /**
  * @brief Build a Promise from a generic callable.
@@ -114,6 +115,49 @@ All(PROMISE&&... promise) {
    );
 }
 
+/**
+ * @brief Await all promises and return a combined result.
+ *
+ * @param promises Promises to await.
+ *
+ * @return void if all promises resolve to void, otherwise std::vector of resolved values.
+ */
+template <class CONTAINER>
+   requires(
+     IS_WPROMISE<typename std::remove_cvref_t<CONTAINER>::value_type>
+     && requires(CONTAINER c) { c.size(); }
+   )
+static constexpr auto
+All(CONTAINER&& promises) {
+   using RETURN = return_t<typename std::remove_cvref_t<CONTAINER>::value_type>;
+
+   if constexpr (std::is_void_v<RETURN>) {
+      return MakePromise(
+        [promises = std::forward<CONTAINER>(promises)]() mutable -> details::IPromise<void> {
+           for (auto const& promise : promises) {
+              co_await promise;
+           }
+
+           co_return;
+        }
+      );
+   } else {
+      return MakePromise(
+        [promises =
+           std::forward<CONTAINER>(promises)]() mutable -> details::IPromise<std::vector<RETURN>> {
+           std::vector<RETURN> results{};
+           results.reserve(promises.size());
+
+           for (auto const& promise : promises) {
+              results.emplace_back(co_await promise);
+           }
+
+           co_return std::move(results);
+        }
+      );
+   }
+}
+
 }  // namespace details
 
 /**
@@ -133,6 +177,20 @@ All(PROMISE&&... promise) {
          return MakePromise(std::forward<PROMISE2>(promise));
       }
    }(std::forward<PROMISE>(promise))...);
+}
+
+/**
+ * @brief Await all promises and return a combined result.
+ *
+ * @param promises Promises to await.
+ *
+ * @return void if all promises resolve to void, otherwise std::vector of resolved values.
+ */
+template <class CONTAINER>
+   requires(IS_WPROMISE<typename std::remove_cvref_t<CONTAINER>::value_type>)
+static constexpr auto
+All(CONTAINER&& promises) {
+   return details::All(std::forward<CONTAINER>(promises));
 }
 
 /**
