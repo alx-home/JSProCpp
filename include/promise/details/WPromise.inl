@@ -168,7 +168,7 @@ template <class T>
 T
 WPromise<T>::Awaitable::await_resume() const noexcept(false) {
    return std::visit(
-     [](auto const& details) constexpr {
+     [](auto const& details) constexpr -> cref_or_void_t<T> {
         assert(details);
         return details->await_resume();
      },
@@ -367,13 +367,11 @@ WPromise<T>::Then(this SELF&& self, FUN&& func, ARGS&&... args) {
         assert(details);
 
         if constexpr (std::is_lvalue_reference_v<SELF>) {
-           return details->Then(
-             std::function{std::forward<FUN>(func)}, std::forward<ARGS>(args)...
-           );
+           return details->Then(std::forward<FUN>(func), std::forward<ARGS>(args)...);
         } else {
            // Transfer ownership to next promise
            return std::move(*details).Then(
-             std::move(details), std::function{std::move(func)}, std::forward<ARGS>(args)...
+             std::move(details), std::forward<FUN>(func), std::forward<ARGS>(args)...
            );
         }
      },
@@ -402,13 +400,11 @@ WPromise<T>::Catch(this SELF&& self, FUN&& func, ARGS&&... args) {
         assert(details);
 
         if constexpr (std::is_lvalue_reference_v<SELF>) {
-           return details->Catch(
-             std::function{std::forward<FUN>(func)}, std::forward<ARGS>(args)...
-           );
+           return details->Catch(std::forward<FUN>(func), std::forward<ARGS>(args)...);
         } else {
            // Transfer ownership to next promise
            return std::move(*details).Catch(
-             std::move(details), std::function{std::move(func)}, std::forward<ARGS>(args)...
+             std::move(details), std::forward<FUN>(func), std::forward<ARGS>(args)...
            );
         }
      },
@@ -435,11 +431,11 @@ WPromise<T>::Finally(this SELF&& self, FUN&& func) {
         assert(details);
 
         if constexpr (std::is_lvalue_reference_v<SELF>) {
-           return details->Finally(std::function{std::forward<FUN>(func)});
+           return details->Finally(std::forward<FUN>(func));
 
         } else {
            // Transfer ownership to next promise
-           return std::move(*details).Finally(std::move(details), std::function{std::move(func)});
+           return std::move(*details).Finally(std::move(details), std::forward<FUN>(func));
         }
      },
      self.details_

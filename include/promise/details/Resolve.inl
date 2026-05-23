@@ -46,9 +46,11 @@ Resolve<T>::Resolve(std::shared_ptr<Resolver<T>> resolver)
  */
 template <class T>
    requires(!std::is_void_v<T>)
+template <class T2>
+   requires(std::convertible_to<T2, T>)
 bool
-Resolve<T>::operator()(T const& value) const {
-   return resolver_->Resolve(value);
+Resolve<T>::operator()(T2&& value) const {
+   return resolver_->Resolve(std::forward<T2>(value));
 }
 
 /**
