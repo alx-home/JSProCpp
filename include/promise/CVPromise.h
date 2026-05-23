@@ -24,7 +24,8 @@ SOFTWARE.
 
 #pragma once
 
-#include "promise.h"
+#include "Mutex.h"
+#include "core.h"
 
 #include <stdexcept>
 #include <type_traits>
@@ -43,7 +44,7 @@ SOFTWARE.
  *   - Resolved()/Rejected() to inspect state.
  *   - Destroying the CVPromise rejects outstanding waiters with End.
  */
-struct CVPromise {
+class CVPromise {
 public:
    /**
     * @brief Exception raised when a CVPromise is destroyed.
@@ -87,6 +88,16 @@ public:
     *          @ref Reject() or the destructor is called.
     */
    [[nodiscard]] WPromise<void> Wait() const;
+
+   /**
+    * @brief Gets a WPromise<void> that resolves when the CVPromise is resolved or rejected.
+    *
+    * @param lock A lock, which will be released before awaiting.
+    *
+    * @return A WPromise<void> that resolves when Notify() is called or rejects if
+    *          @ref Reject() or the destructor is called.
+    */
+   [[nodiscard]] WPromise<void> Wait(promise::LockGuard& lock) const;
 
    /**
     * @brief Gets the underlying WPromise<void> for direct inspection or co_await.

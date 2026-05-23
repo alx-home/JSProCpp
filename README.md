@@ -69,7 +69,7 @@ If you know JavaScript promises, you already know how to use this library — bu
 | Full thread safety | Resolve/reject/await from any thread |
 | Resolver model | `Resolve<T>`, `Reject`, `Promise<T, true>` |
 | Combinators | `promise::All`, `promise::Race`, `promise::Create<T>()` |
-| Async coordination | `CVPromise`, `StatePromise` |
+| Async coordination | `promise::Mutex`, `CVPromise`, `StatePromise` |
 | Threaded dispatch | `promise::Pool`, `promise::MessageQueue` |
 | Introspection | `Done()`, `Resolved()`, `Rejected()`, `Value()`, `Exception()` |
 
@@ -90,6 +90,7 @@ If you know JavaScript promises, you already know how to use this library — bu
 - [`Promise::Resolve` and `Promise::Reject`](#promiseresolve-and-promisereject)
 - [Using resolvers outside the coroutine scope](#using-resolvers-outside-the-coroutine-scope)
 - [`promise::All` and `promise::Race`](#promiseall-and-promiserace)
+- [`promise::Mutex` and `promise::LockGuard` for async synchronization](#promisemutex-and-promiselockguard-for-async-synchronization)
 - [`CVPromise` for async notification](#cvpromise-for-async-notification)
 - [`StatePromise` for ready/done workflows](#statepromise-for-readydone-workflows)
 - [`promise::Pool` and `promise::MessageQueue`](#promisepool-and-promisemessagequeue)
@@ -389,6 +390,23 @@ auto err = Promise<int>::Reject<std::runtime_error>("fail");
 // Create an already‑rejected Promise<int> using MakeReject helper
 // (equivalent to Promise<int>::Reject<T>(...))
 auto err2 = MakeReject<Promise<int>, std::runtime_error>("failed fast"); // Same
+
+// -----------------------------------------------------------------------------
+// promise::Mutex + promise::LockGuard — coroutine-friendly async mutex
+// - LockGuard::Lock() returns WPromise<void> that resolves once lock is acquired
+// - LockGuard::Unlock() releases ownership
+// - CVPromise::Wait(lock) releases lock before wait, then reacquires before resolve
+// -----------------------------------------------------------------------------
+promise::Mutex mutex;
+promise::LockGuard lock{mutex};
+co_await lock.Lock();
+
+CVPromise cv;
+co_await cv.Wait(lock); // unlocks while waiting, lock is reacquired before resolve
+
+if (lock.OwnLock()) {
+	lock.Unlock();
+}
 
 // -----------------------------------------------------------------------------
 // CVPromise — coroutine‑friendly condition‑variable style primitive
@@ -736,6 +754,34 @@ Return-type rules for `Race`:
   are `void`).
 - If the first completed promise rejects, the race rejects and can be handled with `Catch`.
 
+## `promise::Mutex` and `promise::LockGuard` for async synchronization
+
+`promise::Mutex` is a coroutine-friendly synchronization primitive for serializing async access.
+`promise::LockGuard` provides scoped ownership and explicit lock/unlock operations.
+
+```cpp
+#include <promise/Mutex.h>
+
+promise::Mutex mutex;
+
+WPromise task{[&]() -> Promise<void> {
+		promise::LockGuard lock{mutex};
+
+		co_await lock.Lock();      // wait until lock is acquired
+		// critical section
+		lock.Unlock();             // release lock
+
+		co_return;
+}};
+```
+
+Notes:
+
+- `Lock()` is async and returns `WPromise<void>`.
+- `OwnLock()` indicates whether the guard currently owns the lock.
+- `LockGuard` destructor releases the lock automatically if still owned.
+- Multiple waiters are serialized: only one guard owns the lock at a time.
+
 ## `CVPromise` for async notification
 
 `CVPromise` is a coroutine-friendly condition-variable style helper for async notification.
@@ -758,9 +804,35 @@ WPromise waiter{[&]() -> Promise<void> {
 ready.Notify(); // resolves the current waiters
 ```
 
+`CVPromise` also supports lock-aware waiting with `Wait(promise::LockGuard&)`:
+
+```cpp
+#include <promise/CVPromise.h>
+#include <promise/Mutex.h>
+
+CVPromise cv;
+promise::Mutex mutex;
+
+WPromise waiter{[&]() -> Promise<void> {
+	promise::LockGuard lock{mutex};
+	co_await lock.Lock();
+
+	co_await cv.Wait(lock);
+	// At this point, lock is reacquired on successful notify path.
+
+	if (lock.OwnLock()) {
+		lock.Unlock();
+	}
+	co_return;
+}};
+
+cv.Notify();
+```
+
 Notes:
 
 - `Wait()` returns a `WPromise<void>`; `CVPromise` can also be used directly in `co_await` via `operator*()`.
+- `Wait(lock)` releases an owned `LockGuard` before waiting and reacquires it on notify.
 - `Notify()` resolves all current waiters (one-shot signal).
 - Destroying or rejecting a `CVPromise` rejects outstanding waiters with `CVPromise::End`.
 

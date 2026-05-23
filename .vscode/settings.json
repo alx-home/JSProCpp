@@ -46,6 +46,7 @@
                      "groupUngroupedTo": "Other",
                      "groupByTags": {
                         "tags": [
+                           ["Mutex"],
                            ["Core"],
                            ["Chains"],
                            ["Branches"],
