@@ -27,6 +27,7 @@ SOFTWARE.
 #include <cassert>
 #include <memory>
 #include <type_traits>
+#include <concepts>
 
 namespace promise {
 
@@ -70,9 +71,9 @@ public:
    bool operator()() const;
 
    /**
-    * @brief Check whether this resolver can still resolve.
+    * @brief Check whether this resolver has already resolved.
     *
-    * @return True if already resolved, false otherwise.
+    * @return True if this resolver has already resolved, false if it can still resolve.
     */
    operator bool() const;
 
@@ -111,12 +112,14 @@ public:
     *
     * @return True if this call resolved the promise, false if it was already resolved.
     */
-   bool operator()(T const& value) const;
+   template <class T2>
+      requires(std::convertible_to<T2, T>)
+   bool operator()(T2&& value) const;
 
    /**
-    * @brief Check whether this resolver can still resolve.
+    * @brief Check whether this resolver has already resolved.
     *
-    * @return True if already resolved, false otherwise.
+    * @return True if this resolver has already resolved, false if it can still resolve.
     */
    operator bool() const;
 
