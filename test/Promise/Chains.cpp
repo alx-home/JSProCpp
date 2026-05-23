@@ -130,3 +130,40 @@ TEST_CASE("All rejects when any member rejects", "[Promise][Chains]") {
    REQUIRE(all.Rejected());
    RequireException<TestError>(all.Exception());
 }
+
+TEST_CASE("All accepts a container of non-void promises", "[Promise][Chains]") {
+   std::vector<WPromise<int>> promises{};
+   promises.emplace_back([]() -> Promise<int> { co_return 3; });
+   promises.emplace_back([]() -> Promise<int> { co_return 7; });
+   promises.emplace_back([]() -> Promise<int> { co_return 11; });
+
+   auto all = promise::All(std::move(promises));
+
+   REQUIRE(all.Resolved());
+   REQUIRE(all.Value() == std::vector<int>{3, 7, 11});
+}
+
+TEST_CASE("All accepts a container of void promises", "[Promise][Chains]") {
+   std::vector<WPromise<void>> promises{};
+   promises.emplace_back([]() -> Promise<void> { co_return; });
+   promises.emplace_back([]() -> Promise<void> { co_return; });
+
+   auto all = promise::All(std::move(promises));
+
+   REQUIRE(all.Resolved());
+}
+
+TEST_CASE("All container overload rejects when one promise rejects", "[Promise][Chains]") {
+   std::vector<WPromise<int>> promises{};
+   promises.emplace_back([]() -> Promise<int> { co_return 2; });
+   promises.emplace_back([]() -> Promise<int> {
+      throw TestError("container boom");
+      co_return 0;
+   });
+   promises.emplace_back([]() -> Promise<int> { co_return 5; });
+
+   auto all = promise::All(std::move(promises));
+
+   REQUIRE(all.Rejected());
+   RequireException<TestError>(all.Exception());
+}
