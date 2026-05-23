@@ -88,15 +88,10 @@ jobs:
             --gcov-executable gcov-14 \
             --gcov-ignore-errors=all \
             --print-summary \
-            --txt coverage/coverage.txt \
-            --sonarqube coverage/sonar-coverage.xml \
             --html-block-ids \
             --html-theme github.dark-blue \
             --html=coverage/html/coverage.html \
             --html-details=coverage/html/coverage-details.html \
-            --xml -o coverage/coverage.xml \
-            --json coverage/coverage.json \
-            --lcov coverage/coverage.lcov \
             | tee coverage/summary.txt
 
       - name: Upload coverage artifact
