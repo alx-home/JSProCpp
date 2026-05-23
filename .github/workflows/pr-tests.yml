@@ -107,6 +107,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false }}
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/coverage.json
           fail_ci_if_error: false
 
