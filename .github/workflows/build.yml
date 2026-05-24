@@ -88,7 +88,16 @@ jobs:
             --gcov-ignore-errors=all \
             --print-summary \
             --txt coverage/gcovr-summary.txt \
+            --json coverage/coverage.json \
             --sonarqube coverage/sonar-coverage.xml
+
+      - name: Upload coverage to Codecov
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false }}
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/coverage.json
+          fail_ci_if_error: false
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
