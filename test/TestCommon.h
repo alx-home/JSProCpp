@@ -5,6 +5,7 @@
 #endif
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_template_test_macros.hpp>
 
 #include <promise/CVPromise.h>
 #include <promise/MessageQueue.h>
@@ -16,8 +17,13 @@
 #include <exception>
 #include <functional>
 #include <future>
+#include <optional>
 #include <stdexcept>
+#include <string>
 #include <thread>
+#include <type_traits>
+#include <tuple>
+#include <variant>
 
 using namespace std::chrono_literals;
 
@@ -36,6 +42,86 @@ struct FinalThenError : std::runtime_error {
 struct FinallyError : std::runtime_error {
    using std::runtime_error::runtime_error;
 };
+
+namespace test_types {
+struct Matrix {
+   using Int                      = int;
+   using Double                   = double;
+   using Void                     = void;
+   using String                   = std::string;
+   using TupleInt                 = std::tuple<int>;
+   using VariantStringInt         = std::variant<std::string, int>;
+   using VariantIntDouble         = std::variant<int, double>;
+   using OptionalVariantDoubleInt = std::optional<std::variant<double, int>>;
+   using PromiseValueTypes        = std::tuple<
+     Int,
+     Double,
+     String,
+     TupleInt,
+     VariantStringInt,
+     VariantIntDouble,
+     OptionalVariantDoubleInt>;
+};
+
+template <class T>
+T
+ValueFromInt(int value) {
+   if constexpr (std::is_same_v<T, Matrix::String>) {
+      return std::to_string(value);
+   } else if constexpr (std::is_same_v<T, Matrix::TupleInt>) {
+      return Matrix::TupleInt{value};
+   } else if constexpr (std::is_same_v<T, Matrix::VariantStringInt>) {
+      return Matrix::VariantStringInt{value};
+   } else if constexpr (std::is_same_v<T, Matrix::VariantIntDouble>) {
+      return Matrix::VariantIntDouble{value};
+   } else if constexpr (std::is_same_v<T, Matrix::OptionalVariantDoubleInt>) {
+      return Matrix::OptionalVariantDoubleInt{std::variant<double, int>{value}};
+   } else {
+      return static_cast<T>(value);
+   }
+}
+
+template <class T>
+T
+BumpValue(T const& value, int delta) {
+   if constexpr (std::is_same_v<T, Matrix::Int> || std::is_same_v<T, Matrix::Double>) {
+      return static_cast<T>(value + delta);
+   } else if constexpr (std::is_same_v<T, Matrix::String>) {
+      return value + "_" + std::to_string(delta);
+   } else if constexpr (std::is_same_v<T, Matrix::TupleInt>) {
+      return Matrix::TupleInt{std::get<0>(value) + delta};
+   } else if constexpr (std::is_same_v<T, Matrix::VariantStringInt>) {
+      if (std::holds_alternative<int>(value)) {
+         return Matrix::VariantStringInt{std::get<int>(value) + delta};
+      }
+      return Matrix::VariantStringInt{std::get<std::string>(value) + "_" + std::to_string(delta)};
+   } else if constexpr (std::is_same_v<T, Matrix::VariantIntDouble>) {
+      if (std::holds_alternative<int>(value)) {
+         return Matrix::VariantIntDouble{std::get<int>(value) + delta};
+      }
+      return Matrix::VariantIntDouble{std::get<double>(value) + delta};
+   } else if constexpr (std::is_same_v<T, Matrix::OptionalVariantDoubleInt>) {
+      if (!value.has_value()) {
+         return Matrix::OptionalVariantDoubleInt{std::variant<double, int>{delta}};
+      }
+
+      auto variant = value.value();
+      if (std::holds_alternative<int>(variant)) {
+         return Matrix::OptionalVariantDoubleInt{
+           std::variant<double, int>{std::get<int>(variant) + delta}
+         };
+      }
+      return Matrix::OptionalVariantDoubleInt{
+        std::variant<double, int>{std::get<double>(variant) + delta}
+      };
+   } else {
+      return value;
+   }
+}
+
+template <class T>
+using VariantWithString = std::variant<Matrix::String, T>;
+}  // namespace test_types
 
 template <class EXCEPTION>
 void

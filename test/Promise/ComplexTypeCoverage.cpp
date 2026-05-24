@@ -1,41 +1,50 @@
 #include "../TestCommon.h"
 
-using VariantSI = std::variant<std::string, int>;
+using Matrix    = test_types::Matrix;
+using VariantSI = Matrix::VariantStringInt;
+using TupleInt  = Matrix::TupleInt;
 
-TEST_CASE("Tuple<int> promise branches are exercised", "[Promise][ComplexCoverage]") {
+TEMPLATE_LIST_TEST_CASE(
+  "Tuple<int> promise branches are exercised",
+  "[Promise][ComplexCoverage]",
+  Matrix::PromiseValueTypes
+) {
    RunWithTimeout(2s, [&] {
-      auto done = Promise<std::tuple<int>>::Resolve(std::tuple<int>{1});
+      auto done = Promise<TupleInt>::Resolve(TupleInt{1});
       REQUIRE(done.Resolved());
 
-      auto then_done =
-        done.Then([](std::tuple<int> const& value) { return std::get<0>(value) + 2; });
+      auto then_done = done.Then([](TupleInt const& value) { return std::get<0>(value) + 2; });
       REQUIRE(then_done.Resolved());
       REQUIRE(then_done.Value() == 3);
 
       auto finally_done = done.Finally([] {});
       REQUIRE(finally_done.Resolved());
 
-      auto [pending, resolve, reject] = promise::Create<std::tuple<int>>();
+      auto [pending, resolve, reject] = promise::Create<TupleInt>();
       auto pending_then =
-        pending.Then([](std::tuple<int> const& value) { return std::get<0>(value) + 4; });
+        pending.Then([](TupleInt const& value) { return std::get<0>(value) + 4; });
 
       pending.WaitAwaited(0);
-      REQUIRE((*resolve)(std::tuple<int>{5}));
+      REQUIRE((*resolve)(TupleInt{5}));
       REQUIRE_FALSE((*reject)(std::make_exception_ptr(TestError{"ignored"})));
 
       REQUIRE(pending_then.Resolved());
       REQUIRE(pending_then.Value() == 9);
 
-      auto [pending_reject, resolve_reject, reject_reject] = promise::Create<std::tuple<int>>();
-      auto recovered = pending_reject.Catch([](TestError const&) { return std::tuple<int>{7}; });
+      auto [pending_reject, resolve_reject, reject_reject] = promise::Create<TupleInt>();
+      auto recovered = pending_reject.Catch([](TestError const&) { return TupleInt{7}; });
       pending_reject.WaitAwaited(0);
       REQUIRE((*reject_reject)(std::make_exception_ptr(TestError{"tuple reject"})));
-      REQUIRE_FALSE((*resolve_reject)(std::tuple<int>{0}));
+      REQUIRE_FALSE((*resolve_reject)(TupleInt{0}));
       REQUIRE(recovered.Resolved());
    });
 }
 
-TEST_CASE("Variant string-int promise branches are exercised", "[Promise][ComplexCoverage]") {
+TEMPLATE_LIST_TEST_CASE(
+  "Variant string-int promise branches are exercised",
+  "[Promise][ComplexCoverage]",
+  Matrix::PromiseValueTypes
+) {
    RunWithTimeout(2s, [&] {
       auto done_value = Promise<VariantSI>::Resolve(VariantSI{7});
       REQUIRE(done_value.Resolved());
@@ -84,7 +93,11 @@ TEST_CASE("Variant string-int promise branches are exercised", "[Promise][Comple
    });
 }
 
-TEST_CASE("Resolver-backed variant and tuple promises", "[Promise][ComplexCoverage]") {
+TEMPLATE_LIST_TEST_CASE(
+  "Resolver-backed variant and tuple promises",
+  "[Promise][ComplexCoverage]",
+  Matrix::PromiseValueTypes
+) {
    RunWithTimeout(2s, [&] {
       auto resolver_variant = MakePromise(
         [](Resolve<VariantSI> const& resolve, Reject const&) -> Promise<VariantSI, true> {
@@ -95,14 +108,11 @@ TEST_CASE("Resolver-backed variant and tuple promises", "[Promise][ComplexCovera
       REQUIRE(resolver_variant.Resolved());
       REQUIRE(std::holds_alternative<std::string>(resolver_variant.Value()));
 
-      auto resolver_tuple = MakePromise(
-        [](
-          Resolve<std::tuple<int>> const& resolve, Reject const&
-        ) -> Promise<std::tuple<int>, true> {
-           REQUIRE(resolve(std::tuple<int>{42}));
+      auto resolver_tuple =
+        MakePromise([](Resolve<TupleInt> const& resolve, Reject const&) -> Promise<TupleInt, true> {
+           REQUIRE(resolve(TupleInt{42}));
            co_return;
-        }
-      );
+        });
       REQUIRE(resolver_tuple.Resolved());
 
       auto resolver_reject = MakePromise(

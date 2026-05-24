@@ -19,13 +19,12 @@ FetchContent_MakeAvailable(Catch2)
 file(GLOB_RECURSE JSPROCPP_TEST_SOURCES CONFIGURE_DEPENDS
    "${CMAKE_CURRENT_SOURCE_DIR}/Promise/*.cpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/Resolver/*.cpp"
-   "${CMAKE_CURRENT_SOURCE_DIR}/CVPromise/*.cpp"
-   "${CMAKE_CURRENT_SOURCE_DIR}/StatePromise/*.cpp"
+   "${CMAKE_CURRENT_SOURCE_DIR}/Synchronization/*.cpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/MessageQueue/*.cpp"
    "${CMAKE_CURRENT_SOURCE_DIR}/Pool/*.cpp"
 )
 
-add_executable(JSProCpp_test ${JSPROCPP_TEST_SOURCES})
+add_executable(JSProCpp_test ${JSPROCPP_TEST_SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/ExplicitInstantiation.cpp")
 
 target_include_directories(JSProCpp_test PRIVATE
    ${CMAKE_CURRENT_SOURCE_DIR}

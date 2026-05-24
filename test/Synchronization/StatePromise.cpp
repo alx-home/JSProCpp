@@ -1,6 +1,9 @@
 #include "../TestCommon.h"
 
-TEST_CASE("StatePromise tracks ready, done, and reject transitions", "[StatePromise]") {
+TEST_CASE(
+  "StatePromise tracks ready, done, and reject transitions",
+  "[Synchronization][StatePromise]"
+) {
    RunWithTimeout(2s, [&] {
       StatePromise state;
 
@@ -62,7 +65,7 @@ TEST_CASE("StatePromise tracks ready, done, and reject transitions", "[StateProm
    });
 }
 
-TEST_CASE("StatePromise reset restores pending transitions", "[StatePromise]") {
+TEST_CASE("StatePromise reset restores pending transitions", "[Synchronization][StatePromise]") {
    RunWithTimeout(2s, [&] {
       WPromise flow{[]() -> Promise<void> {
          StatePromise state;
@@ -115,7 +118,10 @@ TEST_CASE("StatePromise reset restores pending transitions", "[StatePromise]") {
    });
 }
 
-TEST_CASE("StatePromise reset after Done reinitializes both promises", "[StatePromise]") {
+TEST_CASE(
+  "StatePromise reset after Done reinitializes both promises",
+  "[Synchronization][StatePromise]"
+) {
    RunWithTimeout(2s, [&] {
       StatePromise state;
 
@@ -145,7 +151,10 @@ TEST_CASE("StatePromise reset after Done reinitializes both promises", "[StatePr
    });
 }
 
-TEST_CASE("StatePromise default construction creates pending waiters", "[StatePromise]") {
+TEST_CASE(
+  "StatePromise default construction creates pending waiters",
+  "[Synchronization][StatePromise]"
+) {
    RunWithTimeout(2s, [&] {
       StatePromise state;
 

@@ -1,21 +1,28 @@
 #include "../TestCommon.h"
 
-TEST_CASE("WPromise static helpers and detach APIs", "[Promise][WPromise]") {
-   RunWithTimeout(2s, [&] {
-      auto resolved = WPromise<int>::Resolve(9);
-      REQUIRE(resolved.Resolved());
-      REQUIRE(resolved.Value() == 9);
+using Matrix = test_types::Matrix;
 
-      auto rejected = WPromise<int>::Reject<TestError>("wreject");
+TEMPLATE_LIST_TEST_CASE(
+  "WPromise static helpers and detach APIs",
+  "[Promise][WPromise]",
+  Matrix::PromiseValueTypes
+) {
+   using T = TestType;
+   RunWithTimeout(2s, [&] {
+      auto resolved = WPromise<T>::Resolve(test_types::ValueFromInt<T>(9));
+      REQUIRE(resolved.Resolved());
+      REQUIRE(resolved.Value() == test_types::ValueFromInt<T>(9));
+
+      auto rejected = WPromise<T>::template Reject<TestError>("wreject");
       REQUIRE(rejected.Rejected());
       RequireException<TestError>(rejected.Exception());
 
-      auto [pending, resolve, reject] = WPromise<int>::Create();
+      auto [pending, resolve, reject] = WPromise<T>::Create();
       REQUIRE_FALSE(pending.Done());
-      REQUIRE((*resolve)(12));
+      REQUIRE((*resolve)(test_types::ValueFromInt<T>(12)));
       REQUIRE_FALSE((*reject)(std::make_exception_ptr(TestError{"ignored"})));
       REQUIRE(pending.Resolved());
-      REQUIRE(pending.Value() == 12);
+      REQUIRE(pending.Value() == test_types::ValueFromInt<T>(12));
 
       auto detached = WPromise{[]() -> Promise<void> { co_return; }};
       std::move(detached).Detach();
@@ -25,45 +32,59 @@ TEST_CASE("WPromise static helpers and detach APIs", "[Promise][WPromise]") {
    });
 }
 
-TEST_CASE("WPromise VAwait and co_await adapters", "[Promise][WPromise]") {
+TEMPLATE_LIST_TEST_CASE(
+  "WPromise VAwait and co_await adapters",
+  "[Promise][WPromise]",
+  Matrix::PromiseValueTypes
+) {
+   using T = TestType;
    RunWithTimeout(2s, [&] {
-      auto as_vpromise = WPromise<int>::Resolve(17);
-      auto pointer     = std::move(as_vpromise).ToPointer<promise::VPromise>();
+      auto as_vpromise = WPromise<T>::Resolve(test_types::ValueFromInt<T>(17));
+      auto pointer     = std::move(as_vpromise).template ToPointer<promise::VPromise>();
 
       auto& erased_awaitable = pointer->VAwait();
       REQUIRE(erased_awaitable.await_ready());
       REQUIRE_FALSE(erased_awaitable.await_suspend(std::noop_coroutine()));
       REQUIRE_NOTHROW(erased_awaitable.await_resume());
 
-      auto typed = WPromise<int>::Resolve(23);
+      auto typed = WPromise<T>::Resolve(test_types::ValueFromInt<T>(23));
       auto aw1   = typed.operator co_await();
       REQUIRE(aw1.await_ready());
-      REQUIRE(aw1.await_resume() == 23);
+      REQUIRE(aw1.await_resume() == test_types::ValueFromInt<T>(23));
 
       auto aw2 = operator co_await(typed);
       REQUIRE(aw2.await_ready());
-      REQUIRE(aw2.await_resume() == 23);
+      REQUIRE(aw2.await_resume() == test_types::ValueFromInt<T>(23));
    });
 }
 
-TEST_CASE("WPromise rvalue Then Catch Finally paths", "[Promise][WPromise]") {
+TEMPLATE_LIST_TEST_CASE(
+  "WPromise rvalue Then Catch Finally paths",
+  "[Promise][WPromise]",
+  Matrix::PromiseValueTypes
+) {
+   using T = TestType;
    RunWithTimeout(2s, [&] {
-      auto value_source = WPromise<int>::Resolve(4);
-      auto then_chain   = std::move(value_source).Then([](int value) { return value + 6; });
+      auto value_source = WPromise<T>::Resolve(test_types::ValueFromInt<T>(4));
+      auto then_chain   = std::move(value_source).Then([](T const& value) {
+         return test_types::BumpValue<T>(value, 6);
+      });
       REQUIRE(then_chain.Resolved());
-      REQUIRE(then_chain.Value() == 10);
+      REQUIRE(then_chain.Value() == test_types::BumpValue<T>(test_types::ValueFromInt<T>(4), 6));
 
-      auto reject_source = WPromise<int>::Reject<TestError>("rvalue catch");
-      auto catch_chain   = std::move(reject_source).Catch([](TestError const&) { return 99; });
+      auto reject_source = WPromise<T>::template Reject<TestError>("rvalue catch");
+      auto catch_chain   = std::move(reject_source).Catch([](TestError const&) {
+         return test_types::ValueFromInt<T>(99);
+      });
       REQUIRE(catch_chain.Resolved());
-      REQUIRE(catch_chain.Value() == 99);
+      REQUIRE(catch_chain.Value() == test_types::ValueFromInt<T>(99));
 
       bool finally_called = false;
-      auto finally_source = WPromise<int>::Resolve(12);
+      auto finally_source = WPromise<T>::Resolve(test_types::ValueFromInt<T>(12));
       auto finally_chain =
         std::move(finally_source).Finally([&finally_called] { finally_called = true; });
       REQUIRE(finally_chain.Resolved());
-      REQUIRE(finally_chain.Value() == 12);
+      REQUIRE(finally_chain.Value() == test_types::ValueFromInt<T>(12));
       REQUIRE(finally_called);
    });
 }
@@ -103,24 +124,29 @@ TEST_CASE("WPromise void adapters and rvalue chaining", "[Promise][WPromise]") {
    });
 }
 
-TEST_CASE("WPromise awaiter counters and exception_ptr reject overload", "[Promise][WPromise]") {
+TEMPLATE_LIST_TEST_CASE(
+  "WPromise awaiter counters and exception_ptr reject overload",
+  "[Promise][WPromise]",
+  Matrix::PromiseValueTypes
+) {
+   using T = TestType;
    RunWithTimeout(2s, [&] {
-      auto [source, resolve, reject] = WPromise<int>::Create();
+      auto [source, resolve, reject] = WPromise<T>::Create();
       REQUIRE(source.Awaiters() == 0);
       REQUIRE(source.UseCount() == 0);
 
-      auto chained = source.Then([](int value) { return value + 1; });
+      auto chained = source.Then([](T const& value) { return test_types::BumpValue<T>(value, 1); });
       source.WaitAwaited(0);
       REQUIRE(source.Awaiters() == 1);
       REQUIRE(source.UseCount() >= 1);
 
-      REQUIRE((*resolve)(41));
+      REQUIRE((*resolve)(test_types::ValueFromInt<T>(41)));
       REQUIRE_FALSE((*reject)(std::make_exception_ptr(TestError{"ignored"})));
       REQUIRE(chained.Resolved());
-      REQUIRE(chained.Value() == 42);
+      REQUIRE(chained.Value() == test_types::BumpValue<T>(test_types::ValueFromInt<T>(41), 1));
       REQUIRE(source.Awaiters() == 0);
 
-      auto rejected = WPromise<int>::Reject(std::make_exception_ptr(TestError{"exception_ptr"}));
+      auto rejected = WPromise<T>::Reject(std::make_exception_ptr(TestError{"exception_ptr"}));
       REQUIRE(rejected.Rejected());
       RequireException<TestError>(rejected.Exception());
    });
