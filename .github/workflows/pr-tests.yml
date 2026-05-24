@@ -38,12 +38,11 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang-20 lcov
-          for tool in clang clang++ clang-format clang-tidy clangd lld llvm-ar llvm-ranlib llvm-nm llvm-objdump llvm-objcopy llvm-strip llvm-readelf llvm-readobj llvm-size llvm-cov llvm-profdata llvm-symbolizer; do
-              if [ -f "/usr/bin/${tool}-20" ]; then
-                  update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-20 100
-              fi
-          done
+          sudo apt-get install -y cmake ninja-build gcc-14 g++-14
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python3 -m pip install --upgrade pip gcovr
+          python3 -m pip install --upgrade pip "gcovr[html]"
 
       - name: Configure Debug with coverage
         run: >-
@@ -51,178 +50,51 @@ jobs:
           -S .
           -B build
           -G Ninja
-          -DCMAKE_C_COMPILER=clang
-          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_C_COMPILER=gcc-14
+          -DCMAKE_CXX_COMPILER=g++-14
           -DCMAKE_BUILD_TYPE=Debug
           -DJSPROCPP_BUILD_TESTS=ON
-          -DCMAKE_CXX_FLAGS="-O0 -fprofile-instr-generate -fcoverage-mapping"
-          -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate"
-          -DCMAKE_SHARED_LINKER_FLAGS="-fprofile-instr-generate"
+          -DCMAKE_CXX_FLAGS="-O0 -DNO_COVERAGE --coverage -fprofile-arcs -ftest-coverage"
+          -DCMAKE_EXE_LINKER_FLAGS="--coverage"
+          -DCMAKE_SHARED_LINKER_FLAGS="--coverage"
 
       - name: Build tests
         run: cmake --build build --target JSProCpp_test --config Debug
 
       - name: Run tests
         timeout-minutes: 1
-        env:
-          LLVM_PROFILE_FILE: ${{ github.workspace }}/build/coverage/%p-%m.profraw
-        run: |
-          set -euo pipefail
-          mkdir -p build/coverage
-          ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure
 
       - name: Generate Coverage report
         id: coverage
         run: |
           set -euo pipefail
+          source .venv/bin/activate
           mkdir -p coverage/html
-          LLVM_COV_IGNORE_REGEX='(^|/)(test/|build/|_deps/|\.venv/)'
-          shopt -s nullglob
-          PROFILES=(build/coverage/*.profraw)
-          if [ ${#PROFILES[@]} -eq 0 ]; then
-            echo "No LLVM profile files found in build/coverage"
-            echo "Expected LLVM_PROFILE_FILE=${{ github.workspace }}/build/coverage/%p-%m.profraw"
-            exit 1
-          fi
-          TEST_BIN="$(find build -type f -name JSProCpp_test | head -n 1)"
-          if [ -z "$TEST_BIN" ]; then
-            echo "Unable to locate JSProCpp_test binary in build directory"
-            exit 1
-          fi
 
-          llvm-profdata merge -sparse "${PROFILES[@]}" -o coverage/coverage.profdata
-
-          llvm-cov export \
-            "$TEST_BIN" \
-            -instr-profile=coverage/coverage.profdata \
-            -ignore-filename-regex="$LLVM_COV_IGNORE_REGEX" \
-            -format=lcov \
-            > coverage/coverage.lcov
-
-          awk -v ROOT="$GITHUB_WORKSPACE" '
-            # Merge LCOV records across template instantiations while keeping
-            # coverage limited to project sources (include/ and src/).
-            /^SF:/ {
-              sf = substr($0, 4)
-              in_scope = (index(sf, ROOT "/include/") == 1 || index(sf, ROOT "/src/") == 1)
-              next
-            }
-            /^DA:/ {
-              if (!in_scope) {
-                next
-              }
-              split(substr($0, 4), a, ",")
-              line = a[1]
-              hits = a[2] + 0
-              # Key by file+line so repeated DA entries collapse into one line metric.
-              lk = sf SUBSEP line
-              files[sf] = 1
-              line_hits[lk] += hits
-              next
-            }
-            /^BRDA:/ {
-              if (!in_scope) {
-                next
-              }
-              split(substr($0, 6), a, ",")
-              line = a[1]
-              branch = a[3]
-              taken = a[4]
-              if (taken == "-") {
-                # Skip non-evaluable branches.
-                next
-              }
-              # genhtml requires line coverage on any line with branch coverage.
-              # Ensure a DA entry exists even if llvm-cov omitted it for this line.
-              lk = sf SUBSEP line
-              if (!(lk in line_hits)) {
-                line_hits[lk] = 0
-              }
-              # Key by file+line+branch index to merge duplicated branch records.
-              bk = sf SUBSEP line SUBSEP branch
-              files[sf] = 1
-              branch_hits[bk] += (taken + 0)
-              next
-            }
-            END {
-              for (sf in files) {
-                print "SF:" sf
-
-                lf = lh = 0
-                for (k in line_hits) {
-                  split(k, a, SUBSEP)
-                  if (a[1] == sf) {
-                    line = a[2]
-                    hits = line_hits[k]
-                    printf("DA:%s,%d\n", line, hits)
-                    lf++
-                    if (hits > 0) {
-                      lh++
-                    }
-                  }
-                }
-
-                brf = brh = 0
-                for (k in branch_hits) {
-                  split(k, a, SUBSEP)
-                  if (a[1] == sf) {
-                    line = a[2]
-                    branch = a[3]
-                    taken = branch_hits[k]
-                    printf("BRDA:%s,0,%s,%d\n", line, branch, taken)
-                    brf++
-                    if (taken > 0) {
-                      brh++
-                    }
-                  }
-                }
-
-                printf("LF:%d\n", lf)
-                printf("LH:%d\n", lh)
-                printf("BRF:%d\n", brf)
-                printf("BRH:%d\n", brh)
-                print "end_of_record"
-              }
-            }
-          ' coverage/coverage.lcov > coverage/coverage.merged.lcov
-
-          genhtml \
-            coverage/coverage.merged.lcov \
-            --output-directory coverage/html \
-            --branch-coverage \
-            --legend \
-            --title "JSProCpp PR Coverage" \
-            --prefix "$GITHUB_WORKSPACE" \
-            --ignore-errors source
-
-          llvm-cov show \
-            "$TEST_BIN" \
-            -instr-profile=coverage/coverage.profdata \
-            -ignore-filename-regex="$LLVM_COV_IGNORE_REGEX" \
-            --show-line-counts-or-regions \
-            --show-branches=count \
-            --format=text \
-            > coverage/llvm-cov-show.txt
-
-          llvm-cov report \
-            "$TEST_BIN" \
-            -instr-profile=coverage/coverage.profdata \
-            -ignore-filename-regex="$LLVM_COV_IGNORE_REGEX" \
-            > coverage/llvm-cov-summary.txt
-
-          awk '
-            # Build a compact summary from merged LCOV counters.
-            /^LF:/ { lt += substr($0, 4) + 0 }
-            /^LH:/ { lh += substr($0, 4) + 0 }
-            /^BRF:/ { bt += substr($0, 5) + 0 }
-            /^BRH:/ { bh += substr($0, 5) + 0 }
-            END {
-              lp = (lt > 0) ? (100.0 * lh / lt) : 0
-              bp = (bt > 0) ? (100.0 * bh / bt) : 0
-              printf("lines: %.2f%% (%d/%d)\n", lp, lh, lt)
-              printf("branches: %.2f%% (%d/%d)\n", bp, bh, bt)
-            }
-          ' coverage/coverage.merged.lcov > coverage/summary.txt
+          gcovr \
+            --root . \
+            --merge-lines \
+            --exclude-unreachable-branches \
+            --exclude-throw-branches \
+            --exclude-noncode-lines \
+            --exclude-lines-by-pattern '\s*assert\s*\(' \
+            --object-directory build \
+            --filter 'include/.*' \
+            --filter 'src/.*' \
+            --exclude 'test/.*' \
+            --exclude 'build/CMakeFiles/[0-9]' \
+            --exclude 'build/' \
+            --gcov-executable gcov-14 \
+            --gcov-ignore-errors=all \
+            --print-summary \
+            --html-block-ids \
+            --html-theme github.dark-blue \
+            --html-css .github/workflows/coverage.css \
+            --html=coverage/html/coverage.html \
+            --html-details=coverage/html/coverage-details.html \
+            --json coverage/coverage.json \
+            | tee coverage/summary.txt
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -237,7 +109,7 @@ jobs:
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage/coverage.lcov
+          files: coverage/coverage.json
           fail_ci_if_error: false
 
   deploy-coverage:
@@ -285,14 +157,11 @@ jobs:
         id: coverage-values
         run: |
           set -euo pipefail
-          LINE=$(grep '^lines:' coverage/summary.txt | awk '{print $2}')
-          BRANCH=$(grep '^branches:' coverage/summary.txt | awk '{print $2}')
-          if [ -z "$LINE" ] || [ -z "$BRANCH" ]; then
-            echo "Unable to parse merged coverage from coverage/summary.txt"
-            cat coverage/summary.txt
-            exit 1
-          fi
+          LINE=$(grep "lines:" coverage/summary.txt | awk '{print $2}')
+          FUNCTION=$(grep "functions:" coverage/summary.txt | awk '{print $2}')
+          BRANCH=$(grep "branches:" coverage/summary.txt | awk '{print $2}')
           echo "line=$LINE" >> "$GITHUB_OUTPUT"
+          echo "function=$FUNCTION" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Comment PR with coverage link
@@ -301,10 +170,11 @@ jobs:
           recreate: true
           message: |
             📊 **Coverage report for this PR**
-            👉 https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/index.html
+            👉 https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/coverage.html
 
             **Actual coverage**
             - Line coverage: ${{ steps.coverage-values.outputs.line }}
+            - Function coverage: ${{ steps.coverage-values.outputs.function }}
             - Branch coverage: ${{ steps.coverage-values.outputs.branch }}
 
   enforce-coverage:
@@ -335,13 +205,8 @@ jobs:
       - name: Check coverage thresholds
         run: |
           set -euo pipefail
-          LINE=$(grep '^lines:' coverage/summary.txt | awk '{print $2}' | tr -d '%')
-          BRANCH=$(grep '^branches:' coverage/summary.txt | awk '{print $2}' | tr -d '%')
-          if [ -z "$LINE" ] || [ -z "$BRANCH" ]; then
-            echo "Unable to parse merged coverage from coverage/summary.txt"
-            cat coverage/summary.txt
-            exit 1
-          fi
+          LINE=$(grep "lines:" coverage/summary.txt | awk '{print $2}' | tr -d '%')
+          BRANCH=$(grep "branches:" coverage/summary.txt | awk '{print $2}' | tr -d '%')
 
           echo "Detected line coverage:    $LINE%"
           echo "Detected branch coverage:  $BRANCH%"
