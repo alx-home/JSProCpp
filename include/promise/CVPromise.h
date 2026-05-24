@@ -25,7 +25,6 @@ SOFTWARE.
 #pragma once
 
 #include "Mutex.h"
-#include "core.h"
 
 #include <stdexcept>
 #include <type_traits>

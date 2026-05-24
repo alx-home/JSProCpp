@@ -24,7 +24,7 @@ SOFTWARE.
 
 #pragma once
 
-#include "promise.h"
+#include "core.h"
 
 #include <stdexcept>
 

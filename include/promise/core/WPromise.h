@@ -192,6 +192,8 @@ public:
     *
     * @warning Undefined if called before resolution.
     */
+   template <class...>
+      requires(!std::is_void_v<T>)
    [[nodiscard]] cref_or_void_t<T> Value() const noexcept;
 
    /**
@@ -385,6 +387,52 @@ private:
     * @param details Shared promise state.
     */
    WPromise(Details details);
+
+   /**
+    * @brief Chain a continuation to run on resolve.
+    *
+    * @tparam FUN Type of the continuation function.
+    * @tparam ARGS Types of arguments to forward to the continuation.
+    *
+    * @param func Continuation to invoke on resolve.
+    * @param args Arguments forwarded to the continuation.
+    *
+    * @return Chained promise.
+    * @note Best practice: store the returned promise or call Detach().
+    */
+   template <class FUN, class SELF, class... ARGS>
+   [[nodiscard("Either store this promise or call Detach()")]] constexpr ThenReturn<FUN>
+   ThenImpl(this SELF&& self, FUN&& func, ARGS&&... args);
+
+   /**
+    * @brief Chain a continuation to run on rejection.
+    *
+    * @tparam FUN Type of the continuation function.
+    * @tparam ARGS Types of arguments to forward to the continuation.
+    *
+    * @param func Continuation to invoke on rejection.
+    * @param args Arguments forwarded to the continuation.
+    *
+    * @return Chained promise.
+    * @note Best practice: store the returned promise or call Detach().
+    */
+   template <class FUN, class SELF, class... ARGS>
+   [[nodiscard("Either store this promise or call Detach()")]] constexpr CatchReturn<T, FUN>
+   CatchImpl(this SELF&& self, FUN&& func, ARGS&&... args);
+
+   /**
+    * @brief Chain a continuation that runs regardless of outcome.
+    *
+    * @tparam FUN Type of the continuation function.
+    *
+    * @param func Continuation to invoke after resolve or reject.
+    *
+    * @return Chained promise.
+    * @note Best practice: store the returned promise or call Detach().
+    */
+   template <class FUN, class SELF>
+   [[nodiscard("Either store this promise or call Detach()")]] constexpr FinallyReturn<T>
+   FinallyImpl(this SELF&& self, FUN&& func);
 
    template <class, bool>
    friend class IPromise;

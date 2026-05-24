@@ -24,7 +24,6 @@ SOFTWARE.
 
 #pragma once
 
-#include "core/WPromise.h"
 #include "core.h"
 
 #include <shared_mutex>

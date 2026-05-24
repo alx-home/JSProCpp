@@ -23,6 +23,9 @@ SOFTWARE.
 */
 
 #include "StatePromise.h"
+
+#include "promise.h"
+
 #include <cassert>
 
 /** @brief Constructs a new StatePromise with a fresh promise state. */

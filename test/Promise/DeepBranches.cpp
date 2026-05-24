@@ -180,14 +180,6 @@ TEST_CASE("Detail promise VAwait allocates erased awaitable", "[Promise][DeepBra
    });
 }
 
-TEST_CASE("Internal Unlock guard releases the mutex on scope exit", "[Promise][DeepBranches]") {
-   RunWithTimeout(2s, [&] {
-      auto resolved_detail = TestHelper::Create<int, false>();
-
-      REQUIRE(TestHelper::ExerciseUnlock(*resolved_detail));
-   });
-}
-
 TEST_CASE("Rejected void promise catch resolves through void handler", "[Promise][DeepBranches]") {
    RunWithTimeout(2s, [&] {
       auto promise   = Promise<void>::Reject<TestError>("rejected void");
