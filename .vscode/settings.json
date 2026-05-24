@@ -65,5 +65,7 @@
       }
    ],
    "coverage-gutters.coverageFileNames": ["build/gcov/coverage.xml"],
-   "coverage-gutters.showGutterCoverage": true
+   "coverage-gutters.showGutterCoverage": true,
+   "files.insertFinalNewline": true,
+   "files.trimFinalNewlines": true
 }

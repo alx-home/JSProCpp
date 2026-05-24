@@ -91,6 +91,14 @@ private:
    std::shared_ptr<Resolve<void>> resolve_{};
 };
 
+/**
+ * @brief RAII-style guard for managing Mutex locks.
+ *
+ * LockGuard releases a lock upon destruction.
+ * It supports move semantics but not copy semantics.
+ *
+ * @note The lock is not acquired upon construction; call co_await lock.Lock() to acquire the mutex.
+ */
 class LockGuard {
 public:
    /** @brief Constructs a deferred lock from a shared lock on the Mutex's mutex. */
