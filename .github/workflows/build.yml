@@ -41,10 +41,12 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build gcc-14 g++-14
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python3 -m pip install --upgrade pip gcovr
+          sudo apt-get install -y cmake ninja-build clang-20
+          for tool in clang clang++ clang-format clang-tidy clangd lld llvm-ar llvm-ranlib llvm-nm llvm-objdump llvm-objcopy llvm-strip llvm-readelf llvm-readobj llvm-size llvm-cov llvm-profdata llvm-symbolizer; do
+              if [ -f "/usr/bin/${tool}-20" ]; then
+                  update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-20 100
+              fi
+          done
 
       - name: Configure Debug with coverage
         run: >-
@@ -52,50 +54,68 @@ jobs:
           -S .
           -B build
           -G Ninja
-          -DCMAKE_C_COMPILER=gcc-14
-          -DCMAKE_CXX_COMPILER=g++-14
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
           -DCMAKE_BUILD_TYPE=Debug
           -DJSPROCPP_BUILD_TESTS=ON
-          -DCMAKE_CXX_FLAGS="-O0 --coverage -fprofile-arcs -ftest-coverage"
-          -DCMAKE_EXE_LINKER_FLAGS="--coverage"
-          -DCMAKE_SHARED_LINKER_FLAGS="--coverage"
+          -DCMAKE_CXX_FLAGS="-O0 -fprofile-instr-generate -fcoverage-mapping"
+          -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate"
+          -DCMAKE_SHARED_LINKER_FLAGS="-fprofile-instr-generate"
 
       - name: Build tests
         run: cmake --build build --target JSProCpp_test --config Debug
 
       - name: Run tests
-        run: ctest --test-dir build --output-on-failure
-
-      - name: Generate SonarQube coverage report
+        env:
+          LLVM_PROFILE_FILE: ${{ github.workspace }}/build/coverage/%p-%m.profraw
         run: |
           set -euo pipefail
-          source .venv/bin/activate
+          mkdir -p build/coverage
+          ctest --test-dir build --output-on-failure
+
+      - name: Generate llvm-cov reports
+        run: |
+          set -euo pipefail
           mkdir -p coverage
-          gcovr \
-            --root . \
-            --merge-lines \
-            --exclude-unreachable-branches \
-            --exclude-throw-branches \
-            --exclude-noncode-lines \
-            --exclude-lines-by-pattern '\s*assert\s*\(' \
-            --object-directory build \
-            --filter 'include/.*' \
-            --filter 'src/.*' \
-            --exclude 'test/.*' \
-            --exclude 'build/CMakeFiles/[0-9]' \
-            --exclude 'build/' \
-            --gcov-executable gcov-14 \
-            --gcov-ignore-errors=all \
-            --print-summary \
-            --txt coverage/gcovr-summary.txt \
-            --json coverage/coverage.json \
-            --sonarqube coverage/sonar-coverage.xml
+          shopt -s nullglob
+          PROFILES=(build/coverage/*.profraw)
+          if [ ${#PROFILES[@]} -eq 0 ]; then
+            echo "No LLVM profile files found in build/coverage"
+            echo "Expected LLVM_PROFILE_FILE=${{ github.workspace }}/build/coverage/%p-%m.profraw"
+            exit 1
+          fi
+          TEST_BIN="$(find build -type f -name JSProCpp_test | head -n 1)"
+          if [ -z "$TEST_BIN" ]; then
+            echo "Unable to locate JSProCpp_test binary in build directory"
+            exit 1
+          fi
+
+          llvm-profdata merge -sparse "${PROFILES[@]}" -o coverage/coverage.profdata
+
+          llvm-cov export \
+            "$TEST_BIN" \
+            -instr-profile=coverage/coverage.profdata \
+            -format=lcov \
+            > coverage/coverage.lcov
+
+          llvm-cov show \
+            "$TEST_BIN" \
+            -instr-profile=coverage/coverage.profdata \
+            --show-line-counts-or-regions \
+            --show-branches=count \
+            --format=text \
+            > coverage/llvm-cov-show.txt
+
+          llvm-cov report \
+            "$TEST_BIN" \
+            -instr-profile=coverage/coverage.profdata \
+            > coverage/llvm-cov-summary.txt
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage/coverage.json
+          files: coverage/coverage.lcov
           fail_ci_if_error: false
 
       - name: Upload coverage artifact
@@ -209,7 +229,12 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang
+          sudo apt-get install -y cmake ninja-build clang-20
+          for tool in clang clang++ clang-format clang-tidy clangd lld llvm-ar llvm-ranlib llvm-nm llvm-objdump llvm-objcopy llvm-strip llvm-readelf llvm-readobj llvm-size llvm-cov llvm-profdata llvm-symbolizer; do
+              if [ -f "/usr/bin/${tool}-20" ]; then
+                  update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-20 100
+              fi
+          done
 
       - name: Configure Release
         run: >-

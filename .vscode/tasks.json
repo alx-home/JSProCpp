@@ -7,8 +7,9 @@
          "command": "act",
          "args": [
             "push",
+            "--pull=false",
             "-P",
-            "ubuntu-24.04=catthehacker/ubuntu:act-latest",
+            "ubuntu-24.04=act-ubuntu:24.04",
             "-j",
             "build"
          ],
@@ -23,8 +24,9 @@
             "workflow_dispatch",
             "-W",
             ".github/workflows/pr-tests.yml",
+            "--pull=false",
             "-P",
-            "ubuntu-24.04=catthehacker/ubuntu:act-latest",
+            "ubuntu-24.04=act-ubuntu:24.04",
             "-j",
             "enforce-coverage"
          ],
