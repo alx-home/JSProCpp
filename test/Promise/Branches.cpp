@@ -54,11 +54,6 @@ TEMPLATE_LIST_TEST_CASE(
 
          if constexpr (std::is_same_v<T, Matrix::String>) {
             return std::move(rejected).Then([](Matrix::String const& value) { return value; });
-         } else if constexpr (std::is_same_v<T, Matrix::VariantStringInt>) {
-            return std::move(rejected).Then([](test_types::VariantWithString<T> const& value) {
-               REQUIRE(std::holds_alternative<Matrix::String>(value));
-               return std::get<Matrix::String>(value);
-            });
          } else {
             return std::move(rejected).Then([](test_types::VariantWithString<T> const& value) {
                REQUIRE(std::holds_alternative<Matrix::String>(value));

@@ -163,19 +163,19 @@ TEST_CASE(
       auto waiter_lock = waiter.Lock();
       REQUIRE_FALSE(waiter_lock.Done());
 
-#ifdef __GNUC__
+#ifdef __clang__
 // Suppress self-move warning for testing purposes
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Wself-move"
-#elif __clang__
 #   pragma clang diagnostic push
 #   pragma clang diagnostic ignored "-Wself-move"
+#elif __GNUC__
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wself-move"
 #endif
       owner = std::move(owner);
-#ifdef __GNUC__
-#   pragma GCC diagnostic pop
-#elif __clang__
+#ifdef __clang__
 #   pragma clang diagnostic pop
+#elif __GNUC__
+#   pragma GCC diagnostic pop
 #endif
       REQUIRE(owner.OwnLock());
       REQUIRE_FALSE(waiter_lock.Done());
@@ -227,7 +227,7 @@ TEST_CASE(
 }
 
 TEST_CASE("CVPromise Wait(lock) reacquires when notified", "[Synchronization][Mutex][CVPromise]") {
-   RunWithTimeout(20s, [] {
+   RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
       promise::LockGuard waiter_lock{mutex};
       CVPromise          cv;
