@@ -68,25 +68,6 @@ protected:
    using ValuePromise = ValuePromise<T>;
    /** @brief Lock guard type for shared mutex synchronization. */
    using Locker = std::unique_lock<std::shared_mutex>;
-   /**
-    * @brief Unlock helper for lock guards.
-    */
-   struct Unlock {
-      /** @brief Reference to the lock being managed. */
-      Locker& lock_;
-
-      /**
-       * @brief Unlock the lock on destruction.
-       */
-#if defined(__clang__)
-      __attribute__((no_sanitize("address")))
-#endif
-      ~Unlock() {
-         if (lock_) {
-            lock_.unlock();
-         }
-      }
-   };
 
    /**
     * @brief Returned promise type for this handle.

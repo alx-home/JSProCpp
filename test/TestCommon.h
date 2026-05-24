@@ -10,6 +10,7 @@
 #include <promise/MessageQueue.h>
 #include <promise/Pool.h>
 #include <promise/StatePromise.h>
+#include <promise/promise.h>
 
 #include <chrono>
 #include <exception>
@@ -184,20 +185,6 @@ struct Test {
    }
 
    template <class T, bool WITH_RESOLVER>
-   static bool ExerciseUnlock(promise::details::Promise<T, WITH_RESOLVER>& promise) {
-      std::unique_lock lock{promise.mutex_};
-      using Unlock = typename details::Promise<T, WITH_RESOLVER>::Unlock;
-
-      {
-         Unlock unlock{lock};
-         (void)unlock;
-         REQUIRE(lock.owns_lock());
-      }
-
-      return !lock.owns_lock();
-   }
-
-   template <class T, bool WITH_RESOLVER>
    static std::size_t Awaiters(promise::details::Promise<T, WITH_RESOLVER> const& promise) {
       return promise.Awaiters();
    }
@@ -281,18 +268,18 @@ struct Test {
    template <class T, bool WITH_RESOLVER, class FUN, class... ARGS>
    static auto
    Then(promise::details::Promise<T, WITH_RESOLVER>& promise, FUN&& func, ARGS&&... args) {
-      return promise.Then(std::forward<FUN>(func), std::forward<ARGS>(args)...);
+      return promise.Then(std::function{std::forward<FUN>(func)}, std::forward<ARGS>(args)...);
    }
 
    template <class T, bool WITH_RESOLVER, class FUN, class... ARGS>
    static auto
    Catch(promise::details::Promise<T, WITH_RESOLVER>& promise, FUN&& func, ARGS&&... args) {
-      return promise.Catch(std::forward<FUN>(func), std::forward<ARGS>(args)...);
+      return promise.Catch(std::function{std::forward<FUN>(func)}, std::forward<ARGS>(args)...);
    }
 
    template <class T, bool WITH_RESOLVER, class FUN>
    static auto Finally(promise::details::Promise<T, WITH_RESOLVER>& promise, FUN&& func) {
-      return promise.Finally(std::forward<FUN>(func));
+      return promise.Finally(std::function{std::forward<FUN>(func)});
    }
 };
 }  // namespace promise

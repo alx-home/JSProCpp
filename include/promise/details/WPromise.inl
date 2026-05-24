@@ -244,6 +244,8 @@ WPromise<T>::Resolved() const noexcept {
  * @warning Undefined if called before resolution.
  */
 template <class T>
+template <class...>
+   requires(!std::is_void_v<T>)
 [[nodiscard]] cref_or_void_t<T>
 WPromise<T>::Value() const noexcept {
    return std::visit(
@@ -362,6 +364,39 @@ template <class T>
 template <class FUN, class SELF, class... ARGS>
 [[nodiscard("Either store this promise or call Detach()")]] constexpr ThenReturn<FUN>
 WPromise<T>::Then(this SELF&& self, FUN&& func, ARGS&&... args) {
+   // Normalize lambdas and functors into a single type to reduce instantiations
+
+   if constexpr (!IS_FUNCTION<FUN> && function_constructible<FUN>) {
+      return std::forward<SELF>(self).ThenImpl(
+        std::function{std::forward<FUN>(func)}, std::forward<ARGS>(args)...
+      );
+   } else {
+      return std::forward<SELF>(self).ThenImpl(
+        std::forward<FUN>(func), std::forward<ARGS>(args)...
+      );
+   }
+}
+
+/**
+ * @brief Chain a continuation to run on resolve.
+ *
+ * @tparam FUN Type of the continuation function.
+ * @tparam ARGS Types of arguments to forward to the continuation.
+ *
+ * @param func Continuation to invoke on resolve.
+ * @param args Arguments forwarded to the continuation.
+ *
+ * @return Chained promise.
+ * @note Best practice: store the returned promise or call Detach().
+ */
+template <class T>
+template <class FUN, class SELF, class... ARGS>
+[[nodiscard("Either store this promise or call Detach()")]] constexpr ThenReturn<FUN>
+WPromise<T>::ThenImpl(this SELF&& self, FUN&& func, ARGS&&... args) {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Then std::function shall have been explicitly specified."
+   );
    return std::visit(
      [&](auto&& details) constexpr {
         assert(details);
@@ -395,6 +430,39 @@ template <class T>
 template <class FUN, class SELF, class... ARGS>
 [[nodiscard("Either store this promise or call Detach()")]] constexpr CatchReturn<T, FUN>
 WPromise<T>::Catch(this SELF&& self, FUN&& func, ARGS&&... args) {
+   // Normalize lambdas and functors into a single type to reduce instantiations
+
+   if constexpr (!IS_FUNCTION<FUN> && function_constructible<FUN>) {
+      return std::forward<SELF>(self).CatchImpl(
+        std::function{std::forward<FUN>(func)}, std::forward<ARGS>(args)...
+      );
+   } else {
+      return std::forward<SELF>(self).CatchImpl(
+        std::forward<FUN>(func), std::forward<ARGS>(args)...
+      );
+   }
+}
+
+/**
+ * @brief Chain a continuation to run on rejection.
+ *
+ * @tparam FUN Type of the continuation function.
+ * @tparam ARGS Types of arguments to forward to the continuation.
+ *
+ * @param func Continuation to invoke on rejection.
+ * @param args Arguments forwarded to the continuation.
+ *
+ * @return Chained promise.
+ * @note Best practice: store the returned promise or call Detach().
+ */
+template <class T>
+template <class FUN, class SELF, class... ARGS>
+[[nodiscard("Either store this promise or call Detach()")]] constexpr CatchReturn<T, FUN>
+WPromise<T>::CatchImpl(this SELF&& self, FUN&& func, ARGS&&... args) {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Catch std::function shall have been explicitly specified."
+   );
    return std::visit(
      [&](auto&& details) constexpr {
         assert(details);
@@ -426,6 +494,33 @@ template <class T>
 template <class FUN, class SELF>
 [[nodiscard("Either store this promise or call Detach()")]] constexpr FinallyReturn<T>
 WPromise<T>::Finally(this SELF&& self, FUN&& func) {
+   // Normalize lambdas and functors into a single type to reduce instantiations
+
+   if constexpr (!IS_FUNCTION<FUN> && function_constructible<FUN>) {
+      return std::forward<SELF>(self).FinallyImpl(std::function{std::forward<FUN>(func)});
+   } else {
+      return std::forward<SELF>(self).FinallyImpl(std::forward<FUN>(func));
+   }
+}
+
+/**
+ * @brief Chain a continuation that runs regardless of outcome.
+ *
+ * @tparam FUN Type of the continuation function.
+ *
+ * @param func Continuation to invoke after resolve or reject.
+ *
+ * @return Chained promise.
+ * @note Best practice: store the returned promise or call Detach().
+ */
+template <class T>
+template <class FUN, class SELF>
+[[nodiscard("Either store this promise or call Detach()")]] constexpr FinallyReturn<T>
+WPromise<T>::FinallyImpl(this SELF&& self, FUN&& func) {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Finally std::function shall have been explicitly specified."
+   );
    return std::visit(
      [&](auto&& details) constexpr {
         assert(details);

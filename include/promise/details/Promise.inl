@@ -25,6 +25,7 @@ SOFTWARE.
 #pragma once
 
 #include "../core/Promise.h"
+#include "../core/concepts.inl"
 
 #include <cassert>
 #include <exception>
@@ -281,6 +282,11 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN, class... ARGS>
 [[nodiscard]] constexpr ThenReturn<FUN>
 Promise<T, WITH_RESOLVER>::Then(FUN&& func, ARGS&&... args) & {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Then std::function shall have been explicitly specified."
+   );
+
    if (std::unique_lock ulock{this->mutex_}; this->IsDone(ulock)) {
       ulock.unlock();
       std::shared_lock lock{this->mutex_};
@@ -460,6 +466,11 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN, class... ARGS>
 [[nodiscard]] constexpr ThenReturn<FUN>
 Promise<T, WITH_RESOLVER>::Then(std::shared_ptr<Promise>&& self, FUN&& func, ARGS&&... args) && {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Then std::function shall have been explicitly specified."
+   );
+
    assert(self);
    ScopeExit _{[&]() { std::move(*this).Detach(std::move(self)); }};
    return self->Then(std::forward<FUN>(func), std::forward<ARGS>(args)...);
@@ -480,6 +491,11 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN, class... ARGS>
 [[nodiscard]] constexpr CatchReturn<T, FUN>
 Promise<T, WITH_RESOLVER>::Catch(FUN&& func, ARGS&&... args) & {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Catch std::function shall have been explicitly specified."
+   );
+
    // Promise return type
    using promise_t = return_t<decltype(std::function{func})>;
    using T2 = std::conditional_t<IS_PROMISE_FUNCTION<FUN>, return_or_void_t<promise_t>, promise_t>;
@@ -492,7 +508,11 @@ Promise<T, WITH_RESOLVER>::Catch(FUN&& func, ARGS&&... args) & {
 
    using ReturnType = return_t<CatchReturn<T, FUN>>;
 
-   auto apply_value = [this](auto& lock) constexpr {
+   auto apply_value =
+     [this](auto& lock) constexpr -> std::conditional_t<
+                                    std::is_void_v<T>,
+                                    std::conditional_t<std::is_void_v<T2>, void, std::optional<T2>>,
+                                    cref_or_void_t<T>> {
       if constexpr (std::is_void_v<T>) {
          (void)this;
          lock.unlock();
@@ -570,8 +590,8 @@ Promise<T, WITH_RESOLVER>::Catch(FUN&& func, ARGS&&... args) & {
    };
 
    auto [promise, resolve, reject] = promise::Create<ReturnType>();
-   try {
-      if (std::unique_lock ulock{this->mutex_}; this->IsDone(ulock)) {
+   if (std::unique_lock ulock{this->mutex_}; this->IsDone(ulock)) {
+      try {
          ulock.unlock();
          std::shared_lock lock{this->mutex_};
 
@@ -602,64 +622,64 @@ Promise<T, WITH_RESOLVER>::Catch(FUN&& func, ARGS&&... args) & {
          } else {
             (*resolve)(apply_value(lock));
          }
-      } else {
-         Await(
-           [this,
-            resolve         = std::move(resolve),
-            reject          = std::move(reject),
-            apply_exception = std::move(apply_exception),
-            apply_value     = std::move(apply_value),
-            resolve_wrapper = std::move(resolve_wrapper),
-            ... args        = std::forward<ARGS>(args)] constexpr mutable {
-              std::shared_lock lock{this->mutex_};
-              auto const&      exception = this->GetException(lock);
+      } catch (...) {
+         (*reject)(std::current_exception());
+      }
+   } else {
+      Await(
+        [this,
+         resolve         = std::move(resolve),
+         reject          = std::move(reject),
+         apply_exception = std::move(apply_exception),
+         apply_value     = std::move(apply_value),
+         resolve_wrapper = std::move(resolve_wrapper),
+         ... args        = std::forward<ARGS>(args)] constexpr mutable {
+           std::shared_lock lock{this->mutex_};
+           auto const&      exception = this->GetException(lock);
 
-              try {
-                 if (exception) {
-                    lock.unlock();
+           try {
+              if (exception) {
+                 lock.unlock();
 
-                    if constexpr (IS_PROMISE_FUNCTION<FUN>) {
-                       resolve_wrapper(apply_exception(exception), std::move(resolve))
-                         .Catch([reject = std::move(reject)](std::exception_ptr exception) {
-                            (*reject)(std::move(exception));
-                         })
-                         .Detach();
-                    } else {
-                       (void)resolve_wrapper;
-
-                       if constexpr (
-                         std::is_void_v<
-                           std::invoke_result_t<decltype(apply_exception), decltype(exception)>>
-                       ) {
-                          apply_exception(exception);
-                          (*resolve)();
-                       } else {
-                          (*resolve)(apply_exception(exception));
-                       }
-                    }
+                 if constexpr (IS_PROMISE_FUNCTION<FUN>) {
+                    resolve_wrapper(apply_exception(exception), std::move(resolve))
+                      .Catch([reject = std::move(reject)](std::exception_ptr exception) {
+                         (*reject)(std::move(exception));
+                      })
+                      .Detach();
                  } else {
+                    (void)resolve_wrapper;
+
                     if constexpr (
-                      std::is_void_v<std::invoke_result_t<decltype(apply_value), decltype((lock))>>
+                      std::is_void_v<
+                        std::invoke_result_t<decltype(apply_exception), decltype(exception)>>
                     ) {
-                       apply_value(lock);
+                       apply_exception(exception);
                        (*resolve)();
                     } else {
-                       (*resolve)(apply_value(lock));
+                       (*resolve)(apply_exception(exception));
                     }
                  }
-              } catch (...) {
-                 if (lock.owns_lock()) {
-                    lock.unlock();
+              } else {
+                 if constexpr (
+                   std::is_void_v<std::invoke_result_t<decltype(apply_value), decltype((lock))>>
+                 ) {
+                    apply_value(lock);
+                    (*resolve)();
+                 } else {
+                    (*resolve)(apply_value(lock));
                  }
-
-                 (*reject)(std::current_exception());
               }
-           },
-           ulock
-         );
-      }
-   } catch (...) {
-      (*reject)(std::current_exception());
+           } catch (...) {
+              if (lock.owns_lock()) {
+                 lock.unlock();
+              }
+
+              (*reject)(std::current_exception());
+           }
+        },
+        ulock
+      );
    }
 
    return std::move(promise);
@@ -681,6 +701,11 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN, class... ARGS>
 [[nodiscard]] constexpr CatchReturn<T, FUN>
 Promise<T, WITH_RESOLVER>::Catch(std::shared_ptr<Promise>&& self, FUN&& func, ARGS&&... args) && {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Catch std::function shall have been explicitly specified."
+   );
+
    assert(self);
    ScopeExit _{[&]() { std::move(*this).Detach(std::move(self)); }};
    return self->Catch(std::forward<FUN>(func), std::forward<ARGS>(args)...);
@@ -700,6 +725,11 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN, class... ARGS>
 [[nodiscard]] constexpr FinallyReturn<T>
 Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Finally std::function shall have been explicitly specified."
+   );
+
    auto apply_value = [](auto&& resolve, auto&& reject, auto&& func, auto&&... value) constexpr {
       static_assert(sizeof...(value) == (IS_VOID ? 0 : 1));
 
@@ -713,10 +743,12 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
               })
               .Detach();
          } else {
+            static_assert(sizeof...(value) == 1);
+
             MakePromise(std::forward<FUN>(func))
-              .Then([resolve = std::move(resolve),
-                     value   = std::tuple{std::forward<decltype(value)>(value)...}]() constexpr {
-                 (*resolve)(std::get<0>(value));
+              .Then([resolve   = std::move(resolve),
+                     ... value = std::forward<decltype(value)>(value)]() constexpr {
+                 (*resolve)(value...);
               })
               .Catch([reject =
                         std::forward<decltype(reject)>(reject)](std::exception_ptr exception) {
@@ -789,8 +821,9 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
          apply_value     = std::move(apply_value)] constexpr mutable {
            std::shared_lock lock{this->mutex_};
            auto const&      exception = this->GetException(lock);
-
+#ifndef NO_COVERAGE
            try {
+#endif
               if (exception) {
                  lock.unlock();
                  apply_exception(reject, std::move(func), exception);
@@ -803,7 +836,8 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
 
                  apply_value(std::move(resolve), reject, std::move(func), value);
               }
-           } catch (...) {  // GCOVR_EXCL_START
+#ifndef NO_COVERAGE
+           } catch (...) {
               assert(
                 false
                 && "This shall not throw since we're already handling "
@@ -816,7 +850,8 @@ Promise<T, WITH_RESOLVER>::Finally(FUN&& func) & {
               }
 
               (*reject)(std::current_exception());
-           }  // GCOVR_EXCL_STOP
+           }
+#endif
         },
         ulock
       );
@@ -839,6 +874,11 @@ template <class T, bool WITH_RESOLVER>
 template <class FUN>
 [[nodiscard]] constexpr FinallyReturn<T>
 Promise<T, WITH_RESOLVER>::Finally(std::shared_ptr<Promise>&& self, FUN&& func) && {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Finally std::function shall have been explicitly specified."
+   );
+
    assert(self);
    ScopeExit _{[&]() { std::move(*this).Detach(std::move(self)); }};
    return self->Finally(std::forward<FUN>(func));
@@ -1053,6 +1093,47 @@ constexpr std::conditional_t<
     std::shared_ptr<promise::Reject>>,
   details::WPromise<T>>
 Promise<T, WITH_RESOLVER>::Create(FUN&& func, ARGS&&... args) {
+   // Normalize lambdas and functors into a single type to reduce instantiations
+
+   if constexpr (!IS_FUNCTION<FUN> && function_constructible<FUN>) {
+      return CreateImpl<RPROMISE>(
+        std::function{std::forward<FUN>(func)}, std::forward<ARGS>(args)...
+      );
+   } else {
+      return CreateImpl<RPROMISE>(std::forward<FUN>(func), std::forward<ARGS>(args)...);
+   }
+}
+
+/**
+ * @brief Create a promise from a callable and optional resolver.
+ **
+ * @tparam RPROMISE Boolean flag indicating whether to return a tuple with
+ *             resolver and rejector.
+ * @tparam FUN Type of the callable.
+ * @tparam ARGS Types of arguments to forward to the callable.
+ **
+ * @param func Callable used to produce the promise.
+ * @param args Arguments forwarded to the callable.
+ *
+ * @return Promise or tuple when RPROMISE is true.
+ */
+template <class T, bool WITH_RESOLVER>
+template <bool RPROMISE, class FUN, class... ARGS>
+#if defined(__clang__)
+__attribute__((no_sanitize("address")))
+#endif
+constexpr std::conditional_t<
+  RPROMISE,
+  std::tuple<
+    details::WPromise<T>,
+    std::shared_ptr<promise::Resolve<T>>,
+    std::shared_ptr<promise::Reject>>,
+  details::WPromise<T>>
+Promise<T, WITH_RESOLVER>::CreateImpl(FUN&& func, ARGS&&... args) {
+   static_assert(
+     !function_constructible<FUN> || IS_FUNCTION<FUN>,
+     "Create std::function shall have been explicitly specified."
+   );
    static_assert(
      IS_PROMISE_FUNCTION<FUN>,
      "Create only supports callables that return promises, not "

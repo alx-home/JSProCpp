@@ -89,8 +89,6 @@ protected:
    using handle_type = Handle<T, WITH_RESOLVER>::handle_type;
    /** @brief Lock guard type for shared mutex synchronization. */
    using Locker = typename Handle<T, WITH_RESOLVER>::Locker;
-   /** @brief Unlock helper for lock guards. */
-   using Unlock = typename Handle<T, WITH_RESOLVER>::Unlock;
 
    /** @brief Boolean constant indicating whether this is a void promise. */
    static constexpr bool IS_VOID = std::is_void_v<T>;
@@ -402,7 +400,7 @@ public:
     * @brief Create a promise from a callable and optional resolver.
     **
     * @tparam RPROMISE Boolean flag indicating whether to return a tuple with resolver and
-    *rejector.
+    *           rejector.
     * @tparam FUN Type of the callable.
     * @tparam ARGS Types of arguments to forward to the callable.
     **
@@ -424,6 +422,31 @@ public:
      details::WPromise<T>> Create(FUN&& func, ARGS&&... args);
 
 private:
+   /**
+    * @brief Create a promise from a callable and optional resolver.
+    **
+    * @tparam RPROMISE Boolean flag indicating whether to return a tuple with resolver and
+    *           rejector.
+    * @tparam FUN Type of the callable.
+    * @tparam ARGS Types of arguments to forward to the callable.
+    **
+    * @param func Callable used to produce the promise.
+    * @param args Arguments forwarded to the callable.
+    *
+    * @return Promise or tuple when RPROMISE is true.
+    */
+   template <bool RPROMISE, class FUN, class... ARGS>
+#if defined(__clang__)
+   __attribute__((no_sanitize("address")))
+#endif
+   static constexpr std::conditional_t<
+     RPROMISE,
+     std::tuple<
+       details::WPromise<T>,
+       std::shared_ptr<promise::Resolve<T>>,
+       std::shared_ptr<promise::Reject>>,
+     details::WPromise<T>> CreateImpl(FUN&& func, ARGS&&... args);
+
    std::atomic<std::size_t> use_count_{0};
    struct AwaitFunction : std::function<void()> {
       std::size_t id_{0};
