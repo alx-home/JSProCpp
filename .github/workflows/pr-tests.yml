@@ -315,7 +315,7 @@ jobs:
           sudo apt-get install -y cmake ninja-build clang-20
           for tool in clang clang++ clang-format clang-tidy clangd lld llvm-ar llvm-ranlib llvm-nm llvm-objdump llvm-objcopy llvm-strip llvm-readelf llvm-readobj llvm-size llvm-cov llvm-profdata llvm-symbolizer; do
               if [ -f "/usr/bin/${tool}-20" ]; then
-                  update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-20 100
+                  sudo update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-20 100
               fi
           done
 
