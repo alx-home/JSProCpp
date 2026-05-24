@@ -22,7 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include "Mutex.h"
+#include "promise.h"
 #include "CVPromise.h"
+
 #include <cassert>
 
 /** @brief Constructs a new CVPromise with a fresh promise state. */
@@ -79,6 +82,22 @@ WPromise<void>
 CVPromise::Wait() const {
    std::shared_lock lock{mutex_};
    return promise_;
+}
+
+/** @brief Returns the current waitable promise.
+ *
+ * @return A copy of the underlying WPromise<void>.
+ */
+WPromise<void>
+CVPromise::Wait(promise::LockGuard& lock) const {
+   auto promise = [this] {
+      std::shared_lock cv_lock{mutex_};
+      return promise_;
+   }();
+   if (lock.OwnLock()) {
+      lock.Unlock();
+   }
+   return std::move(promise).Then([&lock] -> Promise<void> { co_await lock.Lock(); });
 }
 
 /** @brief Dereferences to the underlying promise.

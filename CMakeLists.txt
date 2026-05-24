@@ -68,6 +68,7 @@ win32_library(TARGET_NAME jsprocpp
   src/Promise.cpp
   src/PromiseExplicitInstantiations.cpp
   src/CVPromise.cpp
+  src/Mutex.cpp
   src/StatePromise.cpp
   src/MessageQueue.cpp
 )
