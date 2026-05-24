@@ -35,8 +35,7 @@
                   "description": "${relDirpath}",
                   "groupByTags": {
                      "tags": [
-                        ["CVPromise"],
-                        ["StatePromise"],
+                        ["Synchronization"],
                         ["Pool"],
                         ["Resolver"],
                         ["MessageQueue"],
@@ -47,6 +46,9 @@
                      "groupByTags": {
                         "tags": [
                            ["Mutex"],
+                           ["LockGuard"],
+                           ["CVPromise"],
+                           ["StatePromise"],
                            ["Core"],
                            ["Chains"],
                            ["Branches"],

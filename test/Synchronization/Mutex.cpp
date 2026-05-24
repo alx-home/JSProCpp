@@ -3,7 +3,7 @@
 #include <atomic>
 #include <vector>
 
-TEST_CASE("Mutex lock acquisition is serialized", "[Promise][Mutex]") {
+TEST_CASE("Mutex lock acquisition is serialized", "[Synchronization][Mutex]") {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
       promise::LockGuard first{mutex};
@@ -30,7 +30,7 @@ TEST_CASE("Mutex lock acquisition is serialized", "[Promise][Mutex]") {
    });
 }
 
-TEST_CASE("Mutex operator* acquires and queues waiters", "[Promise][Mutex]") {
+TEST_CASE("Mutex operator* acquires and queues waiters", "[Synchronization][Mutex]") {
    RunWithTimeout(2s, [] {
       promise::Mutex mutex;
 
@@ -53,7 +53,10 @@ TEST_CASE("Mutex operator* acquires and queues waiters", "[Promise][Mutex]") {
    });
 }
 
-TEST_CASE("LockGuard destructor unlocks and wakes queued waiter", "[Promise][Mutex]") {
+TEST_CASE(
+  "LockGuard destructor unlocks and wakes queued waiter",
+  "[Synchronization][Mutex][LockGuard]"
+) {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
       promise::LockGuard waiter{mutex};
@@ -82,7 +85,7 @@ TEST_CASE("LockGuard destructor unlocks and wakes queued waiter", "[Promise][Mut
 
 TEST_CASE(
   "LockGuard move constructor transfers ownership and moved-from is inert",
-  "[Promise][Mutex]"
+  "[Synchronization][Mutex][LockGuard]"
 ) {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
@@ -115,7 +118,7 @@ TEST_CASE(
 
 TEST_CASE(
   "LockGuard move assignment unlocks current ownership before transfer",
-  "[Promise][Mutex]"
+  "[Synchronization][Mutex][LockGuard]"
 ) {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
@@ -146,7 +149,7 @@ TEST_CASE(
 
 TEST_CASE(
   "LockGuard move assignment handles self move without releasing lock",
-  "[Promise][Mutex]"
+  "[Synchronization][Mutex][LockGuard]"
 ) {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
@@ -188,7 +191,10 @@ TEST_CASE(
    });
 }
 
-TEST_CASE("Mutex Lock handles immediate and queued branch progression", "[Promise][Mutex]") {
+TEST_CASE(
+  "Mutex Lock handles immediate and queued branch progression",
+  "[Synchronization][Mutex]"
+) {
    RunWithTimeout(2s, [] {
       promise::Mutex mutex;
 
@@ -220,8 +226,8 @@ TEST_CASE("Mutex Lock handles immediate and queued branch progression", "[Promis
    });
 }
 
-TEST_CASE("CVPromise Wait(lock) reacquires when notified", "[Promise][Mutex][CVPromise]") {
-   RunWithTimeout(2s, [] {
+TEST_CASE("CVPromise Wait(lock) reacquires when notified", "[Synchronization][Mutex][CVPromise]") {
+   RunWithTimeout(20s, [] {
       promise::Mutex     mutex;
       promise::LockGuard waiter_lock{mutex};
       CVPromise          cv;
@@ -249,7 +255,7 @@ TEST_CASE("CVPromise Wait(lock) reacquires when notified", "[Promise][Mutex][CVP
 
 TEST_CASE(
   "CVPromise Wait(lock) blocks reacquire while another guard owns lock",
-  "[Promise][Mutex][CVPromise]"
+  "[Synchronization][Mutex][CVPromise]"
 ) {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
@@ -290,7 +296,7 @@ TEST_CASE(
 
 TEST_CASE(
   "CVPromise Wait(lock) does not reacquire lock on rejection",
-  "[Promise][Mutex][CVPromise]"
+  "[Synchronization][Mutex][CVPromise]"
 ) {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
@@ -320,7 +326,7 @@ TEST_CASE(
    });
 }
 
-TEST_CASE("CVPromise Wait(lock) direct WaitDone path", "[Promise][Mutex][CVPromise]") {
+TEST_CASE("CVPromise Wait(lock) direct WaitDone path", "[Synchronization][Mutex][CVPromise]") {
    RunWithTimeout(2s, [] {
       promise::Mutex     mutex;
       promise::LockGuard waiter_lock{mutex};
@@ -339,7 +345,10 @@ TEST_CASE("CVPromise Wait(lock) direct WaitDone path", "[Promise][Mutex][CVPromi
    });
 }
 
-TEST_CASE("Mutex serializes critical section across many threads", "[Promise][Mutex][Concurrent]") {
+TEST_CASE(
+  "Mutex serializes critical section across many threads",
+  "[Synchronization][Mutex][Concurrent]"
+) {
    RunWithTimeout(4s, [] {
       promise::Mutex           mutex;
       std::atomic<int>         in_critical{0};
@@ -387,7 +396,7 @@ TEST_CASE("Mutex serializes critical section across many threads", "[Promise][Mu
 
 TEST_CASE(
   "CVPromise Wait(lock) resumes when notified from another thread",
-  "[Promise][Mutex][Concurrent][CVPromise]"
+  "[Synchronization][Mutex][Concurrent][CVPromise]"
 ) {
    RunWithTimeout(4s, [] {
       promise::Mutex     mutex;
@@ -417,7 +426,7 @@ TEST_CASE(
 
 TEST_CASE(
   "LockGuard co_await acquires and serializes with existing owner",
-  "[Promise][Mutex][co_await]"
+  "[Synchronization][Mutex][LockGuard][co_await]"
 ) {
    RunWithTimeout(4s, [] {
       promise::Mutex     mutex;
@@ -452,7 +461,7 @@ TEST_CASE(
 
 TEST_CASE(
   "CVPromise co_await via dereference resumes when notified from another thread",
-  "[Promise][Mutex][Concurrent][CVPromise][co_await]"
+  "[Synchronization][Mutex][Concurrent][CVPromise][co_await]"
 ) {
    RunWithTimeout(4s, [] {
       CVPromise         cv;

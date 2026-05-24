@@ -1,15 +1,28 @@
 #include "../TestCommon.h"
 
-TEST_CASE("MakePromise supports resolver-first synchronous callables", "[Resolver]") {
-   auto resolved = MakePromise([](Resolve<int> const& resolve) { REQUIRE(resolve(55)); });
+#include "promise/details/helpers.inl"
 
-   auto rejected = MakePromise([](Resolve<int> const&, Reject const& reject) {
-      reject.Apply<TestError>("reject through resolver callable");
+using Matrix = test_types::Matrix;
+
+TEMPLATE_LIST_TEST_CASE(
+  "MakePromise supports resolver-first synchronous callables",
+  "[Resolver]",
+  Matrix::PromiseValueTypes
+) {
+   using T = TestType;
+   RunWithTimeout(2s, [&] {
+      auto resolved = MakePromise([](Resolve<T> const& resolve) {
+         REQUIRE(resolve(test_types::ValueFromInt<T>(55)));
+      });
+
+      auto rejected = MakePromise([](Resolve<T> const&, Reject const& reject) {
+         reject.Apply<TestError>("reject through resolver callable");
+      });
+
+      REQUIRE(resolved.Resolved());
+      REQUIRE(resolved.Value() == test_types::ValueFromInt<T>(55));
+
+      REQUIRE(rejected.Rejected());
+      RequireException<TestError>(rejected.Exception());
    });
-
-   REQUIRE(resolved.Resolved());
-   REQUIRE(resolved.Value() == 55);
-
-   REQUIRE(rejected.Rejected());
-   RequireException<TestError>(rejected.Exception());
 }

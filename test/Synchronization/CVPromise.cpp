@@ -1,6 +1,6 @@
 #include "../TestCommon.h"
 
-TEST_CASE("CVPromise notifies, rejects, and destructor behavior", "[CVPromise]") {
+TEST_CASE("CVPromise notifies, rejects, and destructor behavior", "[Synchronization][CVPromise]") {
    RunWithTimeout(2s, [&] {
       CVPromise cv;
 
@@ -44,7 +44,7 @@ TEST_CASE("CVPromise notifies, rejects, and destructor behavior", "[CVPromise]")
    });
 }
 
-TEST_CASE("CVPromise conversion operators expose updated state", "[CVPromise]") {
+TEST_CASE("CVPromise conversion operators expose updated state", "[Synchronization][CVPromise]") {
    RunWithTimeout(2s, [&] {
       CVPromise cv;
 
@@ -66,7 +66,10 @@ TEST_CASE("CVPromise conversion operators expose updated state", "[CVPromise]") 
    });
 }
 
-TEST_CASE("CVPromise default construction and destruction stay balanced", "[CVPromise]") {
+TEST_CASE(
+  "CVPromise default construction and destruction stay balanced",
+  "[Synchronization][CVPromise]"
+) {
    RunWithTimeout(2s, [&] {
       {
          CVPromise cv;
