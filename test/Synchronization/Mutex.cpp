@@ -11,22 +11,22 @@ TEST_CASE("Mutex lock acquisition is serialized", "[Synchronization][Mutex]") {
 
       auto first_lock = first.Lock();
       REQUIRE(first_lock.Done());
-      REQUIRE(first.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(first.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       auto second_lock = second.Lock();
       REQUIRE_FALSE(second_lock.Done());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(mutex.OwnsLock());
 
       first.Unlock();
 
       second_lock.WaitDone();
       REQUIRE(second_lock.Done());
-      REQUIRE(second.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(second.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       second.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -36,20 +36,20 @@ TEST_CASE("Mutex operator* acquires and queues waiters", "[Synchronization][Mute
 
       auto first = *mutex;
       REQUIRE(first.Done());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(mutex.OwnsLock());
 
       auto second = *mutex;
       REQUIRE_FALSE(second.Done());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(mutex.OwnsLock());
 
       mutex.UnLock();
 
       second.WaitDone();
       REQUIRE(second.Done());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(mutex.OwnsLock());
 
       mutex.UnLock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -66,8 +66,8 @@ TEST_CASE(
          promise::LockGuard owner{mutex};
          auto               owner_lock = owner.Lock();
          REQUIRE(owner_lock.Done());
-         REQUIRE(owner.OwnLock());
-         REQUIRE(mutex.OwnLock());
+         REQUIRE(owner.OwnsLock());
+         REQUIRE(mutex.OwnsLock());
 
          waiter_lock = waiter.Lock();
          REQUIRE_FALSE(waiter_lock.Done());
@@ -75,11 +75,11 @@ TEST_CASE(
 
       waiter_lock.WaitDone();
       REQUIRE(waiter_lock.Done());
-      REQUIRE(waiter.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(waiter.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       waiter.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -96,23 +96,23 @@ TEST_CASE(
          promise::LockGuard owner{mutex};
          auto               owner_lock = owner.Lock();
          REQUIRE(owner_lock.Done());
-         REQUIRE(owner.OwnLock());
+         REQUIRE(owner.OwnsLock());
 
          waiter_lock = waiter.Lock();
          REQUIRE_FALSE(waiter_lock.Done());
 
          promise::LockGuard moved{std::move(owner)};
-         REQUIRE(moved.OwnLock());
-         REQUIRE_FALSE(owner.OwnLock());
+         REQUIRE(moved.OwnsLock());
+         REQUIRE_FALSE(owner.OwnsLock());
       }
 
       waiter_lock.WaitDone();
       REQUIRE(waiter_lock.Done());
-      REQUIRE(waiter.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(waiter.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       waiter.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -128,22 +128,22 @@ TEST_CASE(
 
       auto owner_lock = owner.Lock();
       REQUIRE(owner_lock.Done());
-      REQUIRE(owner.OwnLock());
+      REQUIRE(owner.OwnsLock());
 
       auto waiter_lock = waiter.Lock();
       REQUIRE_FALSE(waiter_lock.Done());
 
       owner = std::move(replacement);
-      REQUIRE_FALSE(owner.OwnLock());
-      REQUIRE_FALSE(replacement.OwnLock());
+      REQUIRE_FALSE(owner.OwnsLock());
+      REQUIRE_FALSE(replacement.OwnsLock());
 
       waiter_lock.WaitDone();
       REQUIRE(waiter_lock.Done());
-      REQUIRE(waiter.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(waiter.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       waiter.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -158,7 +158,7 @@ TEST_CASE(
 
       auto owner_lock = owner.Lock();
       REQUIRE(owner_lock.Done());
-      REQUIRE(owner.OwnLock());
+      REQUIRE(owner.OwnsLock());
 
       auto waiter_lock = waiter.Lock();
       REQUIRE_FALSE(waiter_lock.Done());
@@ -177,17 +177,17 @@ TEST_CASE(
 #elif __GNUC__
 #   pragma GCC diagnostic pop
 #endif
-      REQUIRE(owner.OwnLock());
+      REQUIRE(owner.OwnsLock());
       REQUIRE_FALSE(waiter_lock.Done());
 
       owner.Unlock();
 
       waiter_lock.WaitDone();
       REQUIRE(waiter_lock.Done());
-      REQUIRE(waiter.OwnLock());
+      REQUIRE(waiter.OwnsLock());
 
       waiter.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -200,7 +200,7 @@ TEST_CASE(
 
       auto first = mutex.Lock();
       REQUIRE(first.Done());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(mutex.OwnsLock());
 
       auto second = mutex.Lock();
       auto third  = mutex.Lock();
@@ -213,16 +213,16 @@ TEST_CASE(
 
       REQUIRE(second.Done());
       REQUIRE_FALSE(third.Done());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(mutex.OwnsLock());
 
       mutex.UnLock();
       third.WaitDone();
 
       REQUIRE(third.Done());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(mutex.OwnsLock());
 
       mutex.UnLock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -232,12 +232,12 @@ TEST_CASE("CVPromise Wait(lock) reacquires when notified", "[Synchronization][Mu
       promise::LockGuard waiter_lock{mutex};
       CVPromise          cv;
 
-      REQUIRE_FALSE(waiter_lock.OwnLock());
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(waiter_lock.OwnsLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
 
       auto wait_with_lock = cv.Wait(waiter_lock);
-      REQUIRE_FALSE(waiter_lock.OwnLock());
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(waiter_lock.OwnsLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
       REQUIRE_FALSE(wait_with_lock.Done());
 
       cv.Notify();
@@ -245,11 +245,11 @@ TEST_CASE("CVPromise Wait(lock) reacquires when notified", "[Synchronization][Mu
       wait_with_lock.WaitDone();
       REQUIRE(wait_with_lock.Done());
       REQUIRE(wait_with_lock.Resolved());
-      REQUIRE(waiter_lock.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(waiter_lock.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       waiter_lock.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -265,7 +265,7 @@ TEST_CASE(
 
       auto waiter_first_lock = waiter_lock.Lock();
       REQUIRE(waiter_first_lock.Done());
-      REQUIRE(waiter_lock.OwnLock());
+      REQUIRE(waiter_lock.OwnsLock());
 
       auto wait_with_lock = cv.Wait(waiter_lock);
 
@@ -288,7 +288,7 @@ TEST_CASE(
       REQUIRE(waiter.Done());
       REQUIRE(waiter.Resolved());
       REQUIRE(resumed);
-      REQUIRE(waiter_lock.OwnLock());
+      REQUIRE(waiter_lock.OwnsLock());
 
       waiter_lock.Unlock();
    });
@@ -321,8 +321,8 @@ TEST_CASE(
       REQUIRE(waiter.Done());
       REQUIRE(waiter.Resolved());
       REQUIRE(caught);
-      REQUIRE_FALSE(waiter_lock.OwnLock());
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(waiter_lock.OwnsLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -338,10 +338,10 @@ TEST_CASE("CVPromise Wait(lock) direct WaitDone path", "[Synchronization][Mutex]
       wait_with_lock.WaitDone();
       REQUIRE(wait_with_lock.Done());
       REQUIRE(wait_with_lock.Resolved());
-      REQUIRE(waiter_lock.OwnLock());
+      REQUIRE(waiter_lock.OwnsLock());
 
       waiter_lock.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -390,7 +390,7 @@ TEST_CASE(
       REQUIRE(completed.load() == kThreads * kIterations);
       REQUIRE(in_critical.load() == 0);
       REQUIRE(max_in_critical.load() == 1);
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -416,11 +416,11 @@ TEST_CASE(
 
       REQUIRE(wait_with_lock.Done());
       REQUIRE(wait_with_lock.Resolved());
-      REQUIRE(waiter_lock.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(waiter_lock.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       waiter_lock.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 
@@ -435,7 +435,7 @@ TEST_CASE(
 
       auto first_lock = first.Lock();
       REQUIRE(first_lock.Done());
-      REQUIRE(first.OwnLock());
+      REQUIRE(first.OwnsLock());
 
       bool second_resumed = false;
       auto waiter         = WPromise{[&]() mutable -> Promise<void> {
@@ -451,11 +451,11 @@ TEST_CASE(
       REQUIRE(waiter.Done());
       REQUIRE(waiter.Resolved());
       REQUIRE(second_resumed);
-      REQUIRE(second.OwnLock());
-      REQUIRE(mutex.OwnLock());
+      REQUIRE(second.OwnsLock());
+      REQUIRE(mutex.OwnsLock());
 
       second.Unlock();
-      REQUIRE_FALSE(mutex.OwnLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
    });
 }
 

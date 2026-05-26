@@ -94,7 +94,7 @@ CVPromise::Wait(promise::LockGuard& lock) const {
       std::shared_lock cv_lock{mutex_};
       return promise_;
    }();
-   if (lock.OwnLock()) {
+   if (lock.OwnsLock()) {
       lock.Unlock();
    }
    return std::move(promise).Then([&lock] -> Promise<void> { co_await lock.Lock(); });

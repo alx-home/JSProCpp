@@ -41,7 +41,7 @@ namespace promise {
  * Usage:
  *   - co_await Lock() or co_await *mutex to await the lock.
  *   - UnLock() to release the mutex.
- *   - OwnLock() to check if the mutex is currently owned.
+ *   - OwnsLock() to check if the mutex is currently owned.
  */
 class Mutex {
 public:
@@ -78,7 +78,7 @@ public:
    /**
     * @brief Checks if the mutex is currently owned (locked).
     */
-   bool OwnLock() const;
+   bool OwnsLock() const;
 
 private:
    /** @brief Mutex for synchronizing access to the lock state. */
@@ -143,7 +143,7 @@ public:
     *
     * @return True if the LockGuard owns the lock, false otherwise.
     */
-   bool OwnLock() const;
+   bool OwnsLock() const;
 
 private:
    /** @brief Indicates whether the LockGuard currently owns the lock. */

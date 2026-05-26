@@ -80,7 +80,7 @@ Mutex::UnLock() {
  * @brief Checks if the mutex is currently owned (locked).
  */
 bool
-Mutex::OwnLock() const {
+Mutex::OwnsLock() const {
    std::shared_lock lock{mutex_};
    return resolve_ != nullptr;
 }
@@ -152,7 +152,7 @@ LockGuard::Unlock() {
  * @return True if the LockGuard owns the lock, false otherwise.
  */
 bool
-LockGuard::OwnLock() const {
+LockGuard::OwnsLock() const {
    return own_lock_;
 }
 

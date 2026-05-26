@@ -404,7 +404,7 @@ co_await lock.Lock();
 CVPromise cv;
 co_await cv.Wait(lock); // unlocks while waiting, lock is reacquired before resolve
 
-if (lock.OwnLock()) {
+if (lock.OwnsLock()) {
 	lock.Unlock();
 }
 
@@ -778,7 +778,7 @@ WPromise task{[&]() -> Promise<void> {
 Notes:
 
 - `Lock()` is async and returns `WPromise<void>`.
-- `OwnLock()` indicates whether the guard currently owns the lock.
+- `OwnsLock()` indicates whether the guard currently owns the lock.
 - `LockGuard` destructor releases the lock automatically if still owned.
 - Multiple waiters are serialized: only one guard owns the lock at a time.
 
@@ -820,7 +820,7 @@ WPromise waiter{[&]() -> Promise<void> {
 	co_await cv.Wait(lock);
 	// At this point, lock is reacquired on successful notify path.
 
-	if (lock.OwnLock()) {
+	if (lock.OwnsLock()) {
 		lock.Unlock();
 	}
 	co_return;
