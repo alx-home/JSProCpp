@@ -67,6 +67,9 @@ jobs:
           if-no-files-found: error
           path: |
             build
+            !build/_deps/*-src/**
+            !build/_deps/*-subbuild/**
+            !build/**/CMakeFiles/CMakeScratch/**
 
   test-coverage:
     name: Test, coverage and analyze
@@ -100,6 +103,15 @@ jobs:
         with:
           name: jsprocpp-build-debug
           path: build
+
+      - name: Restore executable permissions
+        run: |
+          set -euo pipefail
+
+          [[ -f build/test/JSProCpp_test ]]
+
+          find build -type f \( -name "JSProCpp_test" -o -name "*.so" -o -name "*.out" \) -exec chmod +x {} + || true
+          chmod +x build/test/JSProCpp_test
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
