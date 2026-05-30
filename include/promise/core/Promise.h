@@ -79,6 +79,8 @@ public:
    /** @brief Coroutine promise_type produced by this details implementation. */
    using promise_type = Handle<T, WITH_RESOLVER>::PromiseType;
 
+   using std::enable_shared_from_this<Promise<T, WITH_RESOLVER>>::shared_from_this;
+
 protected:
    friend class details::IPromise<T, WITH_RESOLVER>;
    friend class details::WPromise<T>;

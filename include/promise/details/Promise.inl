@@ -948,12 +948,13 @@ Promise<T, WITH_RESOLVER>::Race(
       );
       ulock.unlock();
 
-      return std::move(race_promise).Finally([this, id]() constexpr {
-         std::lock_guard lock{this->mutex_};
-         this->UnAwait(id, lock);
+      return std::move(race_promise).Finally([self = this->shared_from_this(), id]() constexpr {
+         std::lock_guard lock{self->mutex_};
+         self->UnAwait(id, lock);
       });
    }
 }
+
 /**
  * @brief Chain a race continuation on an rvalue promise handle.
  *
