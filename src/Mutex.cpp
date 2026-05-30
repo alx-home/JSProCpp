@@ -86,9 +86,16 @@ Mutex::OwnsLock() const {
    return resolve_ != nullptr;
 }
 
-/** @brief Constructs a deferred lock from a shared lock on the Mutex's mutex. */
-LockGuard::LockGuard(Mutex& mutex)
-   : mutex_(&mutex) {}
+/** @brief Constructs a LockGuard associated with a Mutex without acquiring the lock.
+ *
+ * @param mutex The mutex to associate with this guard.
+ * @param unlock The callback used by Unlock() and the destructor to release the mutex. This
+ * callback can implement a custom release strategy, for example by dispatching the unlock
+ * operation to another thread.
+ */
+LockGuard::LockGuard(Mutex& mutex, std::function<void(Mutex&)> const& unlock)
+   : mutex_(&mutex)
+   , unlock_(unlock) {}
 
 /** @brief Creates a LockGuard and acquires the mutex.
  *
@@ -100,9 +107,9 @@ LockGuard::LockGuard(Mutex& mutex)
  * acquired.
  */
 WPromise<std::shared_ptr<LockGuard>>
-LockGuard::Create(Mutex& mutex, bool defer_lock) {
-   return [&mutex, defer_lock] -> Promise<std::shared_ptr<LockGuard>> {
-      auto lock = std::make_shared<LockGuard>(mutex);
+LockGuard::Create(Mutex& mutex, bool defer_lock, std::function<void(Mutex&)> const& unlock) {
+   return [&mutex, defer_lock, unlock] -> Promise<std::shared_ptr<LockGuard>> {
+      auto lock = std::make_shared<LockGuard>(mutex, unlock);
 
       if (!defer_lock) {
          co_await lock->Lock();
@@ -119,9 +126,11 @@ LockGuard::Create(Mutex& mutex, bool defer_lock) {
  */
 LockGuard::LockGuard(LockGuard&& right) noexcept
    : own_lock_(right.own_lock_)
-   , mutex_(right.mutex_) {
+   , mutex_(right.mutex_)
+   , unlock_(std::move(right.unlock_)) {
    right.own_lock_ = false;
    right.mutex_    = nullptr;
+   right.unlock_   = nullptr;
 }
 
 /** @brief Move assignment operator for LockGuard.
@@ -137,13 +146,15 @@ LockGuard::operator=(LockGuard&& right) noexcept {
    if (this != &right) {
       if (own_lock_) {
          assert(mutex_);
-         mutex_->UnLock();
+         unlock_(*mutex_);
       }
 
       own_lock_       = right.own_lock_;
       mutex_          = right.mutex_;
+      unlock_         = std::move(right.unlock_);
       right.own_lock_ = false;
       right.mutex_    = nullptr;
+      right.unlock_   = nullptr;
    }
 
    return *this;
@@ -153,7 +164,7 @@ LockGuard::operator=(LockGuard&& right) noexcept {
 LockGuard::~LockGuard() {
    if (own_lock_) {
       assert(mutex_);
-      mutex_->UnLock();
+      unlock_(*mutex_);
    }
 }
 
@@ -166,7 +177,7 @@ LockGuard::Unlock() {
    assert(own_lock_);
    assert(mutex_);
    own_lock_ = false;
-   mutex_->UnLock();
+   unlock_(*mutex_);
 }
 
 /** @brief Checks if the LockGuard currently owns the lock.

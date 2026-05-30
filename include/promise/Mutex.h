@@ -101,8 +101,17 @@ private:
  */
 class LockGuard {
 public:
-   /** @brief Constructs a deferred lock from a shared lock on the Mutex's mutex. */
-   explicit LockGuard(Mutex& mutex);
+   /** @brief Constructs a LockGuard associated with a Mutex without acquiring the lock.
+    *
+    * @param mutex The mutex to associate with this guard.
+    * @param unlock The callback used by Unlock() and the destructor to release the mutex. This
+    * callback can implement a custom release strategy, for example by dispatching the unlock
+    * operation to another thread.
+    */
+   explicit LockGuard(
+     Mutex&                             mutex,
+     std::function<void(Mutex&)> const& unlock = [](Mutex& mutex) { mutex.UnLock(); }
+   );
 
    /** @brief Creates a LockGuard and acquires the mutex.
     *
@@ -113,7 +122,11 @@ public:
     * @return A promise that resolves to a shared pointer to the created LockGuard once the mutex is
     * acquired.
     */
-   static WPromise<std::shared_ptr<LockGuard>> Create(Mutex& mutex, bool defer_lock = false);
+   static WPromise<std::shared_ptr<LockGuard>> Create(
+     Mutex&                             mutex,
+     bool                               defer_lock = false,
+     std::function<void(Mutex&)> const& unlock     = [](Mutex& mutex) { mutex.UnLock(); }
+   );
 
    LockGuard(LockGuard const&)            = delete;
    LockGuard& operator=(LockGuard const&) = delete;
@@ -162,6 +175,9 @@ private:
    bool own_lock_{false};
    /** @brief Pointer to the associated Mutex. */
    Mutex* mutex_;
+
+   /** @brief Callback used to release the mutex, called by Unlock() and the destructor. */
+   std::function<void(Mutex&)> unlock_;
 
    friend class Mutex;
 };
