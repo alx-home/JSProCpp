@@ -28,6 +28,7 @@ SOFTWARE.
 
 #include <shared_mutex>
 #include <memory>
+#include <optional>
 
 namespace promise {
 
@@ -102,6 +103,17 @@ class LockGuard {
 public:
    /** @brief Constructs a deferred lock from a shared lock on the Mutex's mutex. */
    explicit LockGuard(Mutex& mutex);
+
+   /** @brief Creates a LockGuard and acquires the mutex.
+    *
+    * @param mutex The mutex to lock.
+    * @param defer_lock - If true, the LockGuard will be created without acquiring the lock. The
+    *                         caller must call Lock() to acquire the mutex.
+    *                   - If false (default), the LockGuard will acquire the lock upon creation.
+    * @return A promise that resolves to a shared pointer to the created LockGuard once the mutex is
+    * acquired.
+    */
+   static WPromise<std::shared_ptr<LockGuard>> Create(Mutex& mutex, bool defer_lock = false);
 
    LockGuard(LockGuard const&)            = delete;
    LockGuard& operator=(LockGuard const&) = delete;

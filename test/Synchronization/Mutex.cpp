@@ -192,6 +192,83 @@ TEST_CASE(
 }
 
 TEST_CASE(
+  "LockGuard Create acquires lock by default",
+  "[Synchronization][Mutex][LockGuard][Create]"
+) {
+   RunWithTimeout(2s, [] {
+      promise::Mutex mutex;
+
+      auto created = promise::LockGuard::Create(mutex);
+      created.WaitDone();
+
+      REQUIRE(created.Done());
+      REQUIRE(created.Resolved());
+      REQUIRE(created.Value());
+      REQUIRE(created.Value()->OwnsLock());
+      REQUIRE(mutex.OwnsLock());
+
+      created.Value()->Unlock();
+      REQUIRE_FALSE(mutex.OwnsLock());
+   });
+}
+
+TEST_CASE(
+  "LockGuard Create supports deferred lock",
+  "[Synchronization][Mutex][LockGuard][Create]"
+) {
+   RunWithTimeout(2s, [] {
+      promise::Mutex mutex;
+
+      auto created = promise::LockGuard::Create(mutex, true);
+      created.WaitDone();
+
+      REQUIRE(created.Done());
+      REQUIRE(created.Resolved());
+      REQUIRE(created.Value());
+      REQUIRE_FALSE(created.Value()->OwnsLock());
+      REQUIRE_FALSE(mutex.OwnsLock());
+
+      auto lock = created.Value()->Lock();
+      lock.WaitDone();
+      REQUIRE(lock.Done());
+      REQUIRE(created.Value()->OwnsLock());
+      REQUIRE(mutex.OwnsLock());
+
+      created.Value()->Unlock();
+      REQUIRE_FALSE(mutex.OwnsLock());
+   });
+}
+
+TEST_CASE(
+  "LockGuard Create waits when mutex already owned",
+  "[Synchronization][Mutex][LockGuard][Create]"
+) {
+   RunWithTimeout(2s, [] {
+      promise::Mutex     mutex;
+      promise::LockGuard owner{mutex};
+
+      auto owner_lock = owner.Lock();
+      REQUIRE(owner_lock.Done());
+      REQUIRE(owner.OwnsLock());
+
+      auto created = promise::LockGuard::Create(mutex, false);
+      REQUIRE_FALSE(created.Done());
+
+      owner.Unlock();
+
+      created.WaitDone();
+      REQUIRE(created.Done());
+      REQUIRE(created.Resolved());
+      REQUIRE(created.Value());
+      REQUIRE(created.Value()->OwnsLock());
+      REQUIRE(mutex.OwnsLock());
+
+      created.Value()->Unlock();
+      REQUIRE_FALSE(mutex.OwnsLock());
+   });
+}
+
+TEST_CASE(
   "Mutex Lock handles immediate and queued branch progression",
   "[Synchronization][Mutex]"
 ) {

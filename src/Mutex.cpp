@@ -27,7 +27,8 @@ SOFTWARE.
 #include "promise.h"
 
 #include <cassert>
-#include <tuple>
+#include <memory>
+#include <optional>
 
 namespace promise {
 
@@ -88,6 +89,27 @@ Mutex::OwnsLock() const {
 /** @brief Constructs a deferred lock from a shared lock on the Mutex's mutex. */
 LockGuard::LockGuard(Mutex& mutex)
    : mutex_(&mutex) {}
+
+/** @brief Creates a LockGuard and acquires the mutex.
+ *
+ * @param mutex The mutex to lock.
+ * @param defer_lock - If true, the LockGuard will be created without acquiring the lock. The
+ *                         caller must call Lock() to acquire the mutex.
+ *                   - If false (default), the LockGuard will acquire the lock upon creation.
+ * @return A promise that resolves to a shared pointer to the created LockGuard once the mutex is
+ * acquired.
+ */
+WPromise<std::shared_ptr<LockGuard>>
+LockGuard::Create(Mutex& mutex, bool defer_lock) {
+   return [&mutex, defer_lock] -> Promise<std::shared_ptr<LockGuard>> {
+      auto lock = std::make_shared<LockGuard>(mutex);
+
+      if (!defer_lock) {
+         co_await lock->Lock();
+      }
+      co_return lock;
+   };
+}
 
 /** @brief Move constructor for LockGuard.
  * @param right The LockGuard to move from.
